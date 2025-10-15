@@ -406,7 +406,9 @@ with st.sidebar:
             os.environ["ANTHROPIC_API_KEY"] = new_key
         st.session_state["anthropic_key_saved"] = True
     if st.session_state.get("anthropic_key_saved"):
-        st.caption("Key stored in session. It will be used for the chat assistant during this session.")
+        st.caption(
+            "Key stored in session. It will be used for the chat assistant during this session."
+        )
 
 data = load_assignment_data(config["output_dir"], selected_product, selected_model)
 horizon_cfg = config["horizon"]
@@ -452,7 +454,9 @@ next_day_features = {
 }
 next_day_date = next_day_row["date"].iloc[0] if not next_day_row.empty else None
 
-history_slice = history_data.tail(history_days) if not history_data.empty else history_data
+history_slice = (
+    history_data.tail(history_days) if not history_data.empty else history_data
+)
 display_data = pd.concat([history_slice, next_day_row], ignore_index=False)
 
 purchase_price = float(product_cfg.get("purchase_price", 0.0))
@@ -470,7 +474,9 @@ planner_cols = st.columns([0.62, 0.38], gap="large")
 with planner_cols[0]:
     st.markdown("#### Info")
     info_cols = st.columns(3)
-    last_actual = float(history_data["demand"].iloc[-1]) if not history_data.empty else "—"
+    last_actual = (
+        float(history_data["demand"].iloc[-1]) if not history_data.empty else "—"
+    )
     info_items = [
         ("Purchase price", f"€{purchase_price:.2f}", "planner-value"),
         ("Selling price", f"€{selling_price:.2f}", "planner-value"),
@@ -488,7 +494,7 @@ with planner_cols[0]:
         feature_cols = st.columns(len(next_day_features))
         for col, (feat, value) in zip(feature_cols, next_day_features.items()):
             col.markdown(
-                f"<div class='planner-card'><div class='planner-label'>{feat.replace('_',' ').title()}</div>"
+                f"<div class='planner-card'><div class='planner-label'>{feat.replace('_', ' ').title()}</div>"
                 f"<div class='planner-value feature'>{value:.1f}</div></div>",
                 unsafe_allow_html=True,
             )
@@ -497,7 +503,9 @@ with planner_cols[0]:
 
     st.markdown("#### AI Prediction")
     model_cols = st.columns(3)
-    forecast_value = f"{next_day_forecast:.1f}" if next_day_forecast is not None else "—"
+    forecast_value = (
+        f"{next_day_forecast:.1f}" if next_day_forecast is not None else "—"
+    )
     deviation = f"{mean_pct_deviation:.1f}%" if mean_pct_deviation is not None else "—"
     model_cols[0].markdown(
         f"<div class='planner-card'><div class='planner-label'>Tomorrow forecast</div>"
@@ -525,9 +533,13 @@ with planner_cols[1]:
     with st.form("planning_form", clear_on_submit=False):
         expected_cols = st.columns(2)
         with expected_cols[0]:
-            expected_demand = st.number_input("Expected demand", min_value=0.0, value=0.0, step=5.0)
+            expected_demand = st.number_input(
+                "Expected demand", min_value=0.0, value=0.0, step=5.0
+            )
         with expected_cols[1]:
-            order_quantity = st.number_input("Order quantity", min_value=0.0, value=0.0, step=5.0)
+            order_quantity = st.number_input(
+                "Order quantity", min_value=0.0, value=0.0, step=5.0
+            )
         submitted = st.form_submit_button("Submit", use_container_width=True)
 
 if submitted:
@@ -543,16 +555,18 @@ with chart_col:
         f"{history_days} days actual + {forecast_days} days forecast · {selected_model.upper()} model\n"
         f"{timeframe_text}"
     )
-    facet_features = [feat for feat in selected_features if feat in display_data.columns]
+    facet_features = [
+        feat for feat in selected_features if feat in display_data.columns
+    ]
     facet_df = prepare_facet_frame(display_data, facet_features)
     facet_html, facet_count = make_facet_plot(
         facet_df,
         f"{product_label}: Demand & Signals",
     )
-    chart_height = max(380, 230 * facet_count)
+    chart_height = max(380, 230 * (facet_count - 1))
     st.components.v1.html(facet_html, height=chart_height, scrolling=False)
-
-st.markdown("#### Tabular data")
+    st.markdown("")
+    st.markdown("#### Tabular data")
 table_features = ["demand", "forecast"]
 table_features += [feat for feat in selected_features if feat in display_data.columns]
 table_features = [feat for feat in table_features if feat in display_data.columns]
@@ -577,10 +591,25 @@ if table_features:
 
         def style_rows(row):
             if row.name.lower() == "demand":
-                return ["color: #222222; font-weight: 600" if col == last_col else "color: #222222" for col in row.index]
+                return [
+                    "color: #222222; font-weight: 600"
+                    if col == last_col
+                    else "color: #222222"
+                    for col in row.index
+                ]
             if row.name.lower() == "forecast":
-                return ["color: #e76f51; font-weight: 600" if col == last_col else "color: #e76f51" for col in row.index]
-            return ["color: #2a9d8f; font-weight: 600" if col == last_col else "color: #2a9d8f" for col in row.index]
+                return [
+                    "color: #e76f51; font-weight: 600"
+                    if col == last_col
+                    else "color: #e76f51"
+                    for col in row.index
+                ]
+            return [
+                "color: #2a9d8f; font-weight: 600"
+                if col == last_col
+                else "color: #2a9d8f"
+                for col in row.index
+            ]
 
         styled = table_df.style.apply(style_rows, axis=1)
         st.dataframe(styled, use_container_width=True)

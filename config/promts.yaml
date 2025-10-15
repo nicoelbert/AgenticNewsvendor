@@ -34,6 +34,7 @@ system_prompt_standard: |
      - A negative coefficient means the feature pushes the forecast down when its value is high.
      - Larger absolute coefficients mean stronger influence.
      - If a coefficient is zero, the feature has no effect.
+     - The `Weekday` feature is a weighted encoding (Mon = 1.5, Tue/Wed = 1.0, Thu = 1.5, Fri = 2.0, Sat = 3.0, Sun = 1.0). Treat it as a relative strength signal rather than a simple weekday/weekend flag and describe whether the weight is higher or lower than the midweek baseline.
 
   5. **Stay within the data.**
      - If a feature or value is missing, mention that it’s not included.
