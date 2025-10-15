@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, cast
@@ -33,7 +34,62 @@ from config.llm_loader import load_llm, load_prompt_template
 
 LetsPlot.setup_html()
 
-st.set_page_config(page_title="Inventory Planning Dashboard", layout="wide")
+st.set_page_config(
+    page_title="Inventory Planning Dashboard",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+st.markdown(
+    """
+    <style>
+    body, .stApp {
+        background-color: #ffffff !important;
+        color: #222222 !important;
+    }
+    .planner-card { padding: 0.6rem 0; }
+    .planner-label { font-size: 0.85rem; color: #555555; margin-bottom: 0.25rem; }
+    .planner-value { font-size: 1.5rem; font-weight: 600; color: #222222; }
+    .planner-value.model { color: #e76f51; }
+    .planner-value.feature { color: #2a9d8f; }
+    .tooltip { position: relative; cursor: help; display: inline-block; }
+    .tooltip:hover::after {
+        content: attr(data-tip);
+        position: absolute;
+        left: 0;
+        top: 125%;
+        background: #222222;
+        color: #ffffff;
+        padding: 0.4rem 0.6rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        width: 220px;
+        z-index: 1000;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .tooltip:hover::before {
+        content: "";
+        position: absolute;
+        left: 12px;
+        top: 118%;
+        border-width: 6px;
+        border-style: solid;
+        border-color: #222222 transparent transparent transparent;
+    }
+    .stNumberInput input, .stTextInput > div > input,
+    .stNumberInput button, .stButton button,
+    [data-baseweb="input"],
+    .stChatInput textarea, .stChatInput input,
+    .stChatInput button, .stChatMessage, .stChatInput, .stChatInput textarea,
+    .stChatMessage .stMarkdown {
+        background-color: inherit !important;
+        color: inherit !important;
+        border-color: inherit !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 st.title("Inventory Planning Overview")
 st.caption(
@@ -328,6 +384,25 @@ with st.sidebar:
         "Re-run the generator notebook to refresh the Parquet files."
     )
 
+    st.markdown("---")
+    st.subheader("Anthropic Key")
+    if "anthropic_api_key" not in st.session_state:
+        st.session_state["anthropic_api_key"] = os.getenv("ANTHROPIC_API_KEY", "")
+
+    with st.form("anthropic_key_form", clear_on_submit=False):
+        new_key = st.text_input(
+            "Enter Anthrop ic API key",
+            value=st.session_state["anthropic_api_key"],
+            type="password",
+        )
+        saved = st.form_submit_button("Save key")
+
+    if saved:
+        st.session_state["anthropic_api_key"] = new_key
+        st.session_state["anthropic_key_saved"] = True
+    if st.session_state.get("anthropic_key_saved"):
+        st.caption("Key stored in session. It will be used for the chat assistant during this session.")
+
 data = load_assignment_data(config["output_dir"], selected_product, selected_model)
 horizon_cfg = config["horizon"]
 history_days = horizon_cfg["history_days"]
@@ -381,75 +456,64 @@ neutral_color = "#222222"
 model_color = "#e76f51"
 feature_color = "#2a9d8f"
 
-planner_cols = st.columns([0.65, 0.35], gap="large")
+planner_cols = st.columns([0.62, 0.38], gap="large")
 
 with planner_cols[0]:
-    info_cols = st.columns([0.18, 0.18, 0.18, 0.18, 0.28], gap="small")
-    info_cols[0].markdown(
-        f"<div style='color:{neutral_color}; font-size:0.85rem;'>Purchase</div>"
-        f"<div style='color:{neutral_color}; font-size:1.6rem; font-weight:600;'>€{purchase_price:.2f}</div>",
-        unsafe_allow_html=True,
-    )
-    info_cols[1].markdown(
-        f"<div style='color:{neutral_color}; font-size:0.85rem;'>Selling</div>"
-        f"<div style='color:{neutral_color}; font-size:1.6rem; font-weight:600;'>€{selling_price:.2f}</div>",
-        unsafe_allow_html=True,
-    )
-    forecast_value = (
-        f"{next_day_forecast:.1f}" if next_day_forecast is not None else "—"
-    )
-    info_cols[2].markdown(
-        f"<div style='color:{model_color}; font-size:0.85rem;'>Forecast</div>"
-        f"<div style='color:{model_color}; font-size:1.6rem; font-weight:600;'>{forecast_value}</div>",
-        unsafe_allow_html=True,
-    )
-    info_cols[3].markdown(
-        f"<div style='color:{model_color}; font-size:0.85rem;'>Order</div>"
-        f"<div style='color:{model_color}; font-size:1.6rem; font-weight:600;'>{forecast_value}</div>",
-        unsafe_allow_html=True,
-    )
-    deviation = f"{mean_pct_deviation:.1f}%" if mean_pct_deviation is not None else "—"
-    info_cols[4].markdown(
-        f"<div style='color:{model_color}; font-size:0.85rem;'>Mean % deviation</div>"
-        f"<div style='color:{model_color}; font-size:1.6rem; font-weight:600;'>{deviation}</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("#### Info")
+    info_cols = st.columns(3)
+    last_actual = float(history_data["demand"].iloc[-1]) if not history_data.empty else "—"
+    info_items = [
+        ("Purchase price", f"€{purchase_price:.2f}", "planner-value"),
+        ("Selling price", f"€{selling_price:.2f}", "planner-value"),
+        ("Last actual", f"{last_actual}", "planner-value"),
+    ]
+    for col, (label, value, cls) in zip(info_cols, info_items):
+        col.markdown(
+            f"<div class='planner-card'><div class='planner-label'>{label}</div>"
+            f"<div class='{cls}'>{value}</div></div>",
+            unsafe_allow_html=True,
+        )
 
-    feature_cols = st.columns(max(1, len(next_day_features)), gap="small")
-    for idx, (feat, value) in enumerate(next_day_features.items()):
-        feature_cols[idx].markdown(
-            f"<div style='color:{feature_color}; font-size:0.8rem;'>{feat.replace('_', ' ').title()}</div>"
-            f"<div style='color:{feature_color}; font-size:1.3rem; font-weight:600;'>{value:.1f}</div>",
-            unsafe_allow_html=True,
-        )
-    if not next_day_features:
-        st.markdown(
-            f"<div style='color:{feature_color}; font-size:0.85rem;'>Next-day features</div>"
-            "<div style='font-size:1.2rem; color:#666;'>No feature preview available.</div>",
-            unsafe_allow_html=True,
-        )
+    st.markdown("#### Tomorrow's Features")
+    if next_day_features:
+        feature_cols = st.columns(len(next_day_features))
+        for col, (feat, value) in zip(feature_cols, next_day_features.items()):
+            col.markdown(
+                f"<div class='planner-card'><div class='planner-label'>{feat.replace('_',' ').title()}</div>"
+                f"<div class='planner-value feature'>{value:.1f}</div></div>",
+                unsafe_allow_html=True,
+            )
+    else:
+        st.caption("No feature preview available.")
+
+    st.markdown("#### AI Prediction")
+    model_cols = st.columns(3)
+    forecast_value = f"{next_day_forecast:.1f}" if next_day_forecast is not None else "—"
+    deviation = f"{mean_pct_deviation:.1f}%" if mean_pct_deviation is not None else "—"
+    model_cols[0].markdown(
+        f"<div class='planner-card'><div class='planner-label'>Tomorrow forecast</div>"
+        f"<div class='planner-value model'>{forecast_value}</div></div>",
+        unsafe_allow_html=True,
+    )
+    model_cols[1].markdown(
+        f"<div class='planner-card'><div class='planner-label'>Recommended order</div>"
+        f"<div class='planner-value model'>{forecast_value}</div></div>",
+        unsafe_allow_html=True,
+    )
+    model_cols[2].markdown(
+        f"<div class='planner-card'><div class='planner-label'>Forecast error <span class='tooltip' data-tip='Average absolute percentage error across the history window.'>ℹ️</span></div>"
+        f"<div class='planner-value model'>{deviation}</div></div>",
+        unsafe_allow_html=True,
+    )
 
 with planner_cols[1]:
-    st.markdown(
-        "<div style='font-size:0.95rem; font-weight:600; margin-bottom:0.6rem;'>Planning Input</div>",
-        unsafe_allow_html=True,
-    )
+    st.markdown("#### Planning Input")
     with st.form("planning_form", clear_on_submit=False):
-        expected_cols = st.columns(2, gap="small")
+        expected_cols = st.columns(2)
         with expected_cols[0]:
-            expected_demand = st.number_input(
-                "Expected demand",
-                min_value=0.0,
-                value=0.0,
-                step=5.0,
-            )
+            expected_demand = st.number_input("Expected demand", min_value=0.0, value=0.0, step=5.0)
         with expected_cols[1]:
-            order_quantity = st.number_input(
-                "Order quantity",
-                min_value=0.0,
-                value=0.0,
-                step=5.0,
-            )
+            order_quantity = st.number_input("Order quantity", min_value=0.0, value=0.0, step=5.0)
         submitted = st.form_submit_button("Submit", use_container_width=True)
 
 if submitted:
