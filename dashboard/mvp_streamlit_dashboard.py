@@ -388,6 +388,9 @@ with st.sidebar:
     st.subheader("Anthropic Key")
     if "anthropic_api_key" not in st.session_state:
         st.session_state["anthropic_api_key"] = os.getenv("ANTHROPIC_API_KEY", "")
+    else:
+        if st.session_state["anthropic_api_key"]:
+            os.environ["ANTHROPIC_API_KEY"] = st.session_state["anthropic_api_key"]
 
     with st.form("anthropic_key_form", clear_on_submit=False):
         new_key = st.text_input(
@@ -399,6 +402,8 @@ with st.sidebar:
 
     if saved:
         st.session_state["anthropic_api_key"] = new_key
+        if new_key:
+            os.environ["ANTHROPIC_API_KEY"] = new_key
         st.session_state["anthropic_key_saved"] = True
     if st.session_state.get("anthropic_key_saved"):
         st.caption("Key stored in session. It will be used for the chat assistant during this session.")
@@ -445,6 +450,10 @@ next_day_features = {
     for feat in selected_features
     if feat in next_day_row.columns and not next_day_row.empty
 }
+next_day_date = next_day_row["date"].iloc[0] if not next_day_row.empty else None
+
+history_slice = history_data.tail(history_days) if not history_data.empty else history_data
+display_data = pd.concat([history_slice, next_day_row], ignore_index=False)
 
 purchase_price = float(product_cfg.get("purchase_price", 0.0))
 selling_price = float(product_cfg.get("selling_price", 0.0))
@@ -508,6 +517,11 @@ with planner_cols[0]:
 
 with planner_cols[1]:
     st.markdown("#### Planning Input")
+    if next_day_date is not None:
+        st.markdown(
+            f"<div style='color:#555; font-size:0.9rem;'>Plan the order for <strong>{next_day_date.strftime('%A, %d %b')}</strong> using the information on the left.</div>",
+            unsafe_allow_html=True,
+        )
     with st.form("planning_form", clear_on_submit=False):
         expected_cols = st.columns(2)
         with expected_cols[0]:
@@ -529,8 +543,8 @@ with chart_col:
         f"{history_days} days actual + {forecast_days} days forecast · {selected_model.upper()} model\n"
         f"{timeframe_text}"
     )
-    facet_features = [feat for feat in selected_features if feat in data.columns]
-    facet_df = prepare_facet_frame(data, facet_features)
+    facet_features = [feat for feat in selected_features if feat in display_data.columns]
+    facet_df = prepare_facet_frame(display_data, facet_features)
     facet_html, facet_count = make_facet_plot(
         facet_df,
         f"{product_label}: Demand & Signals",
