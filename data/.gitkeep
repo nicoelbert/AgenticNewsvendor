@@ -1,0 +1,7 @@
+# Generated data files will be stored here
+# This directory is created automatically when data is generated
+
+*.csv
+*.json
+*.parquet
+*.pkl

@@ -1,0 +1,83 @@
+experiment:
+  seed: 42
+  start_date: "2024-06-01"
+  output_dir: "data/experiments/run_001"
+  horizon:
+    training_window: 100
+    history_days: 14
+    forecast_days: 7
+
+  products:
+    fresh_salad:
+      visible_features: ["price", "temperature", "rain", "sports_event"]
+      hidden_features: ["weekday"]
+      noise_features: ["market_index", "odd_cycle"]
+      betas:
+        price: -1.0
+        temperature: 0.9
+        rain: -4.0
+        sports_event: 0.0   # visible but irrelevant
+        weekday: 2.0
+      base_level: 40.0
+      trend_slope: 0.03
+      season_strength: 6.0
+      epsilon_std: 5.0
+      purchase_price: 1.6
+      selling_price: 3.2
+      salvage_value: 0.4
+
+    fresh_bakery:
+      visible_features: ["price", "temperature", "rain", "sports_event"]
+      hidden_features: ["weekday"]
+      noise_features: ["market_index", "odd_cycle"]
+      betas:
+        price: -1.1
+        temperature: 0.0   # no influence
+        rain: 0.0          # no influence
+        sports_event: 4.0
+        weekday: 3.5
+      base_level: 50.0
+      trend_slope: 0.01
+      season_strength: 5.0
+      epsilon_std: 4.0
+      purchase_price: 0.9
+      selling_price: 2.5
+      salvage_value: 0.3
+
+    ready_meal:
+      visible_features: ["price", "temperature", "rain", "sports_event"]
+      hidden_features: ["weekday"]
+      noise_features: ["market_index", "odd_cycle"]
+      betas:
+        price: -1.0
+        temperature: -0.8
+        rain: 4.0
+        sports_event: 0.0  # no effect
+        weekday: 2.0
+      base_level: 55.0
+      trend_slope: -0.02
+      season_strength: 7.0
+      epsilon_std: 4.5
+      purchase_price: 2.8
+      selling_price: 5.5
+      salvage_value: 0.6
+
+  models:
+    good:
+      features: ["price", "temperature", "rain", "sports_event", "weekday"]
+    bad:
+      features: ["price", "temperature", "rain", "sports_event", "weekday", "market_index", "odd_cycle"]
+
+  assignments:
+    - product: fresh_salad
+      model: good
+    - product: fresh_salad
+      model: bad
+    - product: fresh_bakery
+      model: good
+    - product: fresh_bakery
+      model: bad
+    - product: ready_meal
+      model: good
+    - product: ready_meal
+      model: bad
