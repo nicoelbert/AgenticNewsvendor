@@ -2,6 +2,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Tuple, cast
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 import yaml
@@ -17,6 +18,8 @@ from lets_plot import (
     ggsize,
     ggtitle,
     layer_tooltips,
+    scale_color_manual,
+    scale_linetype_manual,
     theme,
     theme_minimal,
 )
@@ -246,10 +249,13 @@ def make_facet_plot(facet_df: pd.DataFrame, title: str) -> Tuple[str, int]:
     else:
         weekday_df["weekday_y"] = 0.0
 
+    color_palette = {"Actual": "#264653", "Forecast": "#e76f51", "Feature": "#2a9d8f"}
+    linetype_palette = {"Actual": "solid", "Forecast": "dashed", "Feature": "solid"}
+
     plot = (
-        ggplot(facet_df, aes("date", "value", color="line_type", group="line_type"))
-        + geom_line(size=1.2, tooltips=tooltip)
-        + geom_point(size=2.4, tooltips=tooltip, alpha=0.85)
+        ggplot(facet_df, aes("date", "value", color="line_type", linetype="line_type", group="line_type"))
+        + geom_line(size=1.3, tooltips=tooltip)
+        + geom_point(size=2.4, tooltips=tooltip, alpha=0.85, show_legend=False)
         + geom_text(
             data=weekday_df,
             mapping=aes("date", "weekday_y", label="weekday_label"),
@@ -266,7 +272,10 @@ def make_facet_plot(facet_df: pd.DataFrame, title: str) -> Tuple[str, int]:
             legend_text=element_text(size=13),
             legend_title=element_text(size=13),
             title=element_text(size=18),
+            legend_position="top",
         )
+        + scale_color_manual(values=color_palette)
+        + scale_linetype_manual(values=linetype_palette)
         + ggsize(1080, max(340, 220 * n_facets))
         + ggtitle(title)
     )
@@ -325,11 +334,19 @@ timeframe_text = (
     else "Configured horizon"
 )
 
-rmse_history = float(data["rmse_history"].iloc[0]) if "rmse_history" in data else None
 forecast_defaults = data[data["phase"] == "forecast"]["forecast"]
 forecast_default_value = (
     float(forecast_defaults.mean()) if not forecast_defaults.empty else 0.0
 )
+
+history_data = data[data["phase"] == "history"]
+if not history_data.empty:
+    demand_nonzero = history_data["demand"].replace(0, np.nan)
+    pct_errors = (history_data["forecast"] - history_data["demand"]).abs() / demand_nonzero
+    pct_errors = pct_errors.dropna()
+    mean_pct_deviation = float(pct_errors.mean() * 100) if not pct_errors.empty else None
+else:
+    mean_pct_deviation = None
 
 purchase_price = float(product_cfg.get("purchase_price", 0.0))
 selling_price = float(product_cfg.get("selling_price", 0.0))
@@ -341,7 +358,10 @@ top_cols = st.columns([0.2, 0.2, 0.2, 0.4], gap="medium")
 
 top_cols[0].metric("Purchase", f"€{purchase_price:.2f}")
 top_cols[1].metric("Selling", f"€{selling_price:.2f}")
-top_cols[2].metric("RMSE", f"{rmse_history:.2f}" if rmse_history is not None else "—")
+if mean_pct_deviation is not None:
+    top_cols[2].metric("Mean % deviation", f"{mean_pct_deviation:.1f}%")
+else:
+    top_cols[2].metric("Mean % deviation", "—")
 
 with top_cols[3]:
     with st.form("planning_form", clear_on_submit=False):
