@@ -253,7 +253,16 @@ def make_facet_plot(facet_df: pd.DataFrame, title: str) -> Tuple[str, int]:
     linetype_palette = {"Actual": "solid", "Forecast": "dashed", "Feature": "solid"}
 
     plot = (
-        ggplot(facet_df, aes("date", "value", color="line_type", linetype="line_type", group="line_type"))
+        ggplot(
+            facet_df,
+            aes(
+                "date",
+                "value",
+                color="line_type",
+                linetype="line_type",
+                group="line_type",
+            ),
+        )
         + geom_line(size=1.3, tooltips=tooltip)
         + geom_point(size=2.4, tooltips=tooltip, alpha=0.85, show_legend=False)
         + geom_text(
@@ -342,11 +351,25 @@ forecast_default_value = (
 history_data = data[data["phase"] == "history"]
 if not history_data.empty:
     demand_nonzero = history_data["demand"].replace(0, np.nan)
-    pct_errors = (history_data["forecast"] - history_data["demand"]).abs() / demand_nonzero
+    pct_errors = (
+        history_data["forecast"] - history_data["demand"]
+    ).abs() / demand_nonzero
     pct_errors = pct_errors.dropna()
-    mean_pct_deviation = float(pct_errors.mean() * 100) if not pct_errors.empty else None
+    mean_pct_deviation = (
+        float(pct_errors.mean() * 100) if not pct_errors.empty else None
+    )
 else:
     mean_pct_deviation = None
+
+next_day_row = data[data["phase"] == "forecast"].head(1)
+next_day_forecast = (
+    float(next_day_row["forecast"].iloc[0]) if not next_day_row.empty else None
+)
+next_day_features = {
+    feat: float(next_day_row[feat].iloc[0])
+    for feat in selected_features
+    if feat in next_day_row.columns and not next_day_row.empty
+}
 
 purchase_price = float(product_cfg.get("purchase_price", 0.0))
 selling_price = float(product_cfg.get("selling_price", 0.0))
@@ -354,16 +377,63 @@ salvage_value = float(product_cfg.get("salvage_value", 0.0))
 underage_cost = selling_price - purchase_price
 overage_cost = purchase_price - salvage_value
 
-top_cols = st.columns([0.2, 0.2, 0.2, 0.4], gap="medium")
+neutral_color = "#222222"
+model_color = "#e76f51"
+feature_color = "#2a9d8f"
 
-top_cols[0].metric("Purchase", f"€{purchase_price:.2f}")
-top_cols[1].metric("Selling", f"€{selling_price:.2f}")
-if mean_pct_deviation is not None:
-    top_cols[2].metric("Mean % deviation", f"{mean_pct_deviation:.1f}%")
-else:
-    top_cols[2].metric("Mean % deviation", "—")
+planner_cols = st.columns([0.65, 0.35], gap="large")
 
-with top_cols[3]:
+with planner_cols[0]:
+    info_cols = st.columns([0.18, 0.18, 0.18, 0.18, 0.28], gap="small")
+    info_cols[0].markdown(
+        f"<div style='color:{neutral_color}; font-size:0.85rem;'>Purchase</div>"
+        f"<div style='color:{neutral_color}; font-size:1.6rem; font-weight:600;'>€{purchase_price:.2f}</div>",
+        unsafe_allow_html=True,
+    )
+    info_cols[1].markdown(
+        f"<div style='color:{neutral_color}; font-size:0.85rem;'>Selling</div>"
+        f"<div style='color:{neutral_color}; font-size:1.6rem; font-weight:600;'>€{selling_price:.2f}</div>",
+        unsafe_allow_html=True,
+    )
+    forecast_value = (
+        f"{next_day_forecast:.1f}" if next_day_forecast is not None else "—"
+    )
+    info_cols[2].markdown(
+        f"<div style='color:{model_color}; font-size:0.85rem;'>Forecast</div>"
+        f"<div style='color:{model_color}; font-size:1.6rem; font-weight:600;'>{forecast_value}</div>",
+        unsafe_allow_html=True,
+    )
+    info_cols[3].markdown(
+        f"<div style='color:{model_color}; font-size:0.85rem;'>Order</div>"
+        f"<div style='color:{model_color}; font-size:1.6rem; font-weight:600;'>{forecast_value}</div>",
+        unsafe_allow_html=True,
+    )
+    deviation = f"{mean_pct_deviation:.1f}%" if mean_pct_deviation is not None else "—"
+    info_cols[4].markdown(
+        f"<div style='color:{model_color}; font-size:0.85rem;'>Mean % deviation</div>"
+        f"<div style='color:{model_color}; font-size:1.6rem; font-weight:600;'>{deviation}</div>",
+        unsafe_allow_html=True,
+    )
+
+    feature_cols = st.columns(max(1, len(next_day_features)), gap="small")
+    for idx, (feat, value) in enumerate(next_day_features.items()):
+        feature_cols[idx].markdown(
+            f"<div style='color:{feature_color}; font-size:0.8rem;'>{feat.replace('_', ' ').title()}</div>"
+            f"<div style='color:{feature_color}; font-size:1.3rem; font-weight:600;'>{value:.1f}</div>",
+            unsafe_allow_html=True,
+        )
+    if not next_day_features:
+        st.markdown(
+            f"<div style='color:{feature_color}; font-size:0.85rem;'>Next-day features</div>"
+            "<div style='font-size:1.2rem; color:#666;'>No feature preview available.</div>",
+            unsafe_allow_html=True,
+        )
+
+with planner_cols[1]:
+    st.markdown(
+        "<div style='font-size:0.95rem; font-weight:600; margin-bottom:0.6rem;'>Planning Input</div>",
+        unsafe_allow_html=True,
+    )
     with st.form("planning_form", clear_on_submit=False):
         expected_cols = st.columns(2, gap="small")
         with expected_cols[0]:
@@ -403,6 +473,30 @@ with chart_col:
     )
     chart_height = max(380, 230 * facet_count)
     st.components.v1.html(facet_html, height=chart_height, scrolling=False)
+
+    with st.expander("Scenario data table", expanded=False):
+        table_features = ["demand", "forecast"]
+        table_features += [feat for feat in selected_features if feat in data.columns]
+        table_features = [feat for feat in table_features if feat in data.columns]
+        if table_features:
+            table_matrix = data.set_index("date")[table_features].T
+            month_labels = [idx.strftime("%b") for idx in table_matrix.columns]
+            day_labels = [idx.strftime("%d") for idx in table_matrix.columns]
+            table_matrix.columns = pd.MultiIndex.from_arrays([month_labels, day_labels])
+
+            def _format_value_table(val):
+                try:
+                    return f"{float(val):.1f}"
+                except (TypeError, ValueError):
+                    return val
+
+            rounded_matrix = table_matrix.applymap(_format_value_table)
+            rounded_matrix.index = [
+                name.replace("_", " ").title() for name in rounded_matrix.index
+            ]
+            st.dataframe(rounded_matrix)
+        else:
+            st.info("No features selected for the table view.")
 
 with chat_col:
     st.markdown("### 🤖 Chat")

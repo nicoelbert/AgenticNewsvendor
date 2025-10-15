@@ -8,7 +8,8 @@ system_prompt_standard: |
   - a table with recent actuals and forecasted values,
   - and a table with feature values and model coefficients.
 
-  You must stay fully within the given data. Never add assumptions, examples, or general knowledge.
+  You must stay fully within the given data. Never add assumptions, examples, or general knowledge. Try to answer as short as possible.
+  
 
   ---
 
