@@ -552,29 +552,40 @@ with chart_col:
     chart_height = max(380, 230 * facet_count)
     st.components.v1.html(facet_html, height=chart_height, scrolling=False)
 
-    with st.expander("Scenario data table", expanded=False):
-        table_features = ["demand", "forecast"]
-        table_features += [feat for feat in selected_features if feat in data.columns]
-        table_features = [feat for feat in table_features if feat in data.columns]
-        if table_features:
-            table_matrix = data.set_index("date")[table_features].T
-            month_labels = [idx.strftime("%b") for idx in table_matrix.columns]
-            day_labels = [idx.strftime("%d") for idx in table_matrix.columns]
-            table_matrix.columns = pd.MultiIndex.from_arrays([month_labels, day_labels])
+st.markdown("#### Tabular data")
+table_features = ["demand", "forecast"]
+table_features += [feat for feat in selected_features if feat in display_data.columns]
+table_features = [feat for feat in table_features if feat in display_data.columns]
+if table_features:
+    table_df = display_data.set_index("date")[table_features].T
+    months = [idx.strftime("%b") for idx in table_df.columns]
+    days = [idx.strftime("%d") for idx in table_df.columns]
+    weekdays = [idx.strftime("%a") for idx in table_df.columns]
+    table_df.columns = pd.MultiIndex.from_arrays([months, days, weekdays])
 
-            def _format_value_table(val):
-                try:
-                    return f"{float(val):.1f}"
-                except (TypeError, ValueError):
-                    return val
+    def _format_value(val):
+        try:
+            return f"{float(val):.1f}"
+        except (TypeError, ValueError):
+            return val
 
-            rounded_matrix = table_matrix.applymap(_format_value_table)
-            rounded_matrix.index = [
-                name.replace("_", " ").title() for name in rounded_matrix.index
-            ]
-            st.dataframe(rounded_matrix)
-        else:
-            st.info("No features selected for the table view.")
+    table_df = table_df.applymap(_format_value)
+    table_df.index = [name.replace("_", " ").title() for name in table_df.index]
+    if not table_df.empty:
+        table_df.iloc[0, -1] = "?"
+        last_col = table_df.columns[-1]
+
+        def style_rows(row):
+            if row.name.lower() == "demand":
+                return ["color: #222222; font-weight: 600" if col == last_col else "color: #222222" for col in row.index]
+            if row.name.lower() == "forecast":
+                return ["color: #e76f51; font-weight: 600" if col == last_col else "color: #e76f51" for col in row.index]
+            return ["color: #2a9d8f; font-weight: 600" if col == last_col else "color: #2a9d8f" for col in row.index]
+
+        styled = table_df.style.apply(style_rows, axis=1)
+        st.dataframe(styled, use_container_width=True)
+else:
+    st.info("No features selected for the table view.")
 
 with chat_col:
     st.markdown("### 🤖 Chat")
