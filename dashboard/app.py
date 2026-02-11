@@ -898,9 +898,6 @@ def page_main_task():
             unsafe_allow_html=True,
         )
 
-        # Get questions first
-        questions = agent.get_available_questions()
-
         # Grey chat box using container with border
         chat_container = st.container(border=True)
         with chat_container:
@@ -909,166 +906,155 @@ def page_main_task():
                 for msg in st.session_state.chat_history:
                     render_chat_message(msg["role"], msg["content"])
 
-        # Generate numeric-based responses
-        def get_numeric_response(q_id: str) -> str:
-            uncertainty = scenario.ai_forecast * 0.15  # ±15%
-            low = int(scenario.ai_forecast - uncertainty)
-            high = int(scenario.ai_forecast + uncertainty)
-
-            responses = {
-                "explain_forecast": f"""Meine Prognose von **{scenario.ai_forecast} Einheiten** setzt sich zusammen aus:
-
-• Basisnachfrage: ~{int(scenario.ai_forecast * 0.7)} Einheiten
-• Temperatureffekt ({visible.get("temperature", 20)}°C): +{int(scenario.ai_forecast * 0.15)} Einheiten
-• Wochentageffekt ({visible.get("weekday", "N/A")}): +{int(scenario.ai_forecast * 0.08)} Einheiten
-• Sonstige Faktoren: +{int(scenario.ai_forecast * 0.07)} Einheiten""",
-                "confidence": f"""Meine **Konfidenz** für diese Prognose:
-
-• Erwartete Nachfrage: **{scenario.ai_forecast}** Einheiten
-• 70%-Konfidenzintervall: **{low} - {high}** Einheiten
-• Historische Genauigkeit: ±{int(uncertainty)} Einheiten in {int(70 + scenario.ai_forecast % 10)}% der Fälle
-
-Die Unsicherheit kommt hauptsächlich von täglichen Schwankungen.""",
-                "what_factors": f"""Mein Modell berücksichtigt folgende **Faktoren**:
-
-✅ **Sichtbar für mich:**
-• Temperatur (aktuell: {visible.get("temperature", 20)}°C) → Koeffizient: +0.8 pro °C
-• Regen (aktuell: {"Ja" if visible.get("rain") else "Nein"}) → Koeffizient: -5.0
-• Wochentag (aktuell: {visible.get("weekday", "N/A")}) → Koeffizient: +4.0
-• Preis (aktuell: €{visible.get("price", 0):.2f})
-
-❌ **Nicht verfügbar:**
-• Lokale Veranstaltungen
-• Schulferien
-• Wettbewerberaktionen""",
-                "why_order_more": f"""Ich empfehle **{scenario.ai_recommendation}** statt {scenario.ai_forecast} Einheiten wegen der **Kostenasymmetrie**:
-
-• Entgangener Gewinn pro Fehlmenge: **€{scenario.profit_per_unit:.2f}**
-• Verlust pro unverkaufter Einheit: **€{scenario.loss_per_unit:.2f}**
-
-Da Fehlmengen teurer sind ({scenario.profit_per_unit:.2f} > {scenario.loss_per_unit:.2f}),
-ist es besser, etwas mehr zu bestellen. Die optimale Bestellmenge liegt beim
-**{int(scenario.profit_per_unit / (scenario.profit_per_unit + scenario.loss_per_unit) * 100)}. Perzentil** der erwarteten Nachfrage.""",
-                "what_missing": f"""Folgende Informationen habe ich **nicht**:
-
-❌ Lokale Veranstaltungen (Sport, Festivals, Konzerte)
-❌ Schulferienkalender
-❌ Aktivitäten von Wettbewerbern
-❌ Kurzfristige Wetteränderungen
-❌ Besondere Kundenanfragen
-
-Wenn Sie von solchen Faktoren wissen, sollten Sie meine Prognose von
-**{scenario.ai_forecast}** Einheiten entsprechend anpassen.""",
+        # Build feature list from visible_betas for responses
+        def get_feature_list() -> str:
+            beta_labels = {
+                "temperature": "Temperatur",
+                "rain": "Regen",
+                "weekday_friday": "Wochentag (Freitag)",
+                "weekday_saturday": "Wochentag (Samstag)",
+                "weekday_sunday": "Wochentag (Sonntag)",
+                "promotion": "Aktion/Promotion",
             }
+            features = []
+            for beta_name in scenario.visible_betas.keys():
+                label = beta_labels.get(beta_name, beta_name)
+                features.append(f"• {label}")
+            return "\n".join(features)
 
-            # Specific questions
-            if "school_holiday" in q_id or "holiday" in q_id:
-                return f"""Ich habe **keinen Zugang** zu Schulferienkalendern.
+        # Generate responses based on question type
+        def get_response(q_type: str, custom_term: str = None) -> str:
+            ci_low = int(scenario.ai_forecast * 0.85)
+            ci_high = int(scenario.ai_forecast * 1.15)
 
-Meine Prognose von {scenario.ai_forecast} Einheiten basiert nur auf Wetter und Wochentag.
+            if q_type == "model_features":
+                return f"""Das Modell nutzt folgende **Eingabedaten** (siehe Modelldokumentation):
 
-Schulferien können die Nachfrage um **+20-40%** beeinflussen, besonders bei:
-• Eis und Süßwaren (Kinder zu Hause)
-• Familienprodukte
+{get_feature_list()}
 
-Falls Schulferien sind, empfehle ich eine Anpassung nach oben."""
+Basisnachfrage: {scenario.base_level} Einheiten
 
-            if "football" in q_id or "match" in q_id or "sport" in q_id:
-                return f"""Ich habe **keine Daten** zu Sportveranstaltungen.
+Die Koeffizienten zeigen, wie stark jeder Faktor die Prognose beeinflusst."""
 
-Bei Fußballspielen kann die Nachfrage variieren:
-• Fertiggerichte: **+30-50%** (Spielabend zu Hause)
-• Snacks & Getränke: **+20-40%**
-• Frische Salate: **+5-10%** (geringerer Effekt)
+            elif q_type == "calculation":
+                # Build calculation breakdown
+                calc_parts = [f"Basisnachfrage: {scenario.base_level}"]
+                for beta_name, coeff in scenario.visible_betas.items():
+                    if coeff != 0:
+                        sign = "+" if coeff > 0 else ""
+                        calc_parts.append(f"{beta_name}: {sign}{coeff:.1f}")
 
-Meine aktuelle Prognose von {scenario.ai_forecast} Einheiten berücksichtigt dies nicht."""
+                return f"""Die Prognose berechnet sich aus:
 
-            if "festival" in q_id:
-                return f"""Ich tracke **keine lokalen Veranstaltungen** wie Festivals.
+**Basisnachfrage** + Summe der Feature-Effekte
 
-Straßenfeste in der Nähe können bedeuten:
-• Mehr Laufkundschaft: **+15-30%** Nachfrage
-• Aber auch: Konkurrenz durch Essensstände
+Für dieses Szenario:
+• Basisnachfrage: {scenario.base_level} Einheiten
+• Feature-Effekte: siehe Modelldokumentation
 
-Meine Prognose von {scenario.ai_forecast} Einheiten geht von einem normalen Tag aus."""
+**Ergebnis:** {scenario.ai_forecast} Einheiten
+**70%-Konfidenzintervall:** [{ci_low}, {ci_high}]"""
 
-            if "market" in q_id or "farmers" in q_id:
-                return f"""Ich habe **keine Informationen** über Wochenmärkte.
+            elif q_type == "check_feature":
+                if not custom_term:
+                    return "Bitte geben Sie einen Begriff ein, den ich prüfen soll."
 
-Ein nahegelegener Markt mit Bäckerei-/Gemüseständen kann bedeuten:
-• Weniger Kunden für ähnliche Produkte: **-20-30%**
-• Besonders betroffen: Brot, frisches Obst/Gemüse
+                # Check if term matches any known feature
+                term_lower = custom_term.lower()
+                known_features = {
+                    "temperatur": "temperature",
+                    "temp": "temperature",
+                    "wetter": "temperature",
+                    "regen": "rain",
+                    "wochentag": "weekday_friday",
+                    "freitag": "weekday_friday",
+                    "samstag": "weekday_saturday",
+                    "sonntag": "weekday_sunday",
+                    "aktion": "promotion",
+                    "promotion": "promotion",
+                    "angebot": "promotion",
+                }
 
-Meine Prognose von {scenario.ai_forecast} könnte zu hoch sein, wenn ein Markt stattfindet."""
+                # Check if it's a known feature
+                matched_feature = None
+                for keyword, feature_key in known_features.items():
+                    if keyword in term_lower:
+                        if feature_key in scenario.visible_betas:
+                            matched_feature = feature_key
+                            break
 
-            if "weather" in q_id:
-                return f"""Ich verwende die **offizielle Wettervorhersage** von heute Morgen:
-• Temperatur: {visible.get("temperature", 20)}°C
-• Regen: {"Ja" if visible.get("rain") else "Nein"}
+                if matched_feature:
+                    coeff = scenario.visible_betas[matched_feature]
+                    return f"""✅ **"{custom_term}"** ist in der Modelldokumentation enthalten.
 
-⚠️ Ich aktualisiere mich nicht in Echtzeit. Falls Sie aktuellere
-Wetterinformationen haben, sollten Sie diese berücksichtigen.
+Feature: {matched_feature}
+Koeffizient: {'+' if coeff >= 0 else ''}{coeff:.1f}
 
-Regen reduziert die Salat-Nachfrage um ca. **-15%**."""
+Dieser Faktor ist bereits in der Prognose von {scenario.ai_forecast} Einheiten berücksichtigt."""
+                else:
+                    return f"""❌ **"{custom_term}"** ist **nicht** in der Modelldokumentation aufgeführt.
 
-            return responses.get(q_id, agent.answer_question(q_id))
+Das Modell verwendet nur:
+{get_feature_list()}
 
-        # German question suggestions (chatbot-style)
-        german_questions = {
-            "explain_forecast": "Wie kam die Prognose zustande?",
-            "confidence": "Wie sicher bist du?",
-            "what_factors": "Welche Faktoren?",
-            "why_order_more": "Warum mehr bestellen?",
-            "what_missing": "Was weißt du nicht?",
-            "consider_school_holiday": "Schulferien?",
-            "consider_football_match": "Sportevents?",
-            "consider_street_festival": "Fest in der Nähe?",
-            "consider_farmers_market": "Wochenmarkt?",
-            "consider_weather": "Wetter aktuell?",
-        }
+"{custom_term}" ist kein Input-Feature des Prognosemodells."""
 
-        # Chat container with suggestions
+            return "Ich kann diese Frage nicht beantworten."
+
+        # 3 standardized question buttons
+        question_buttons = [
+            ("model_features", "Welche Daten nutzt das Modell?"),
+            ("calculation", "Wie berechnet sich die Prognose?"),
+        ]
+
         with chat_container:
-            # Suggestion chips - full width, subtle dashed style
+            # Show suggestion label only if no chat history
             if not st.session_state.chat_history:
                 st.markdown(
-                    '<p style="color:#666; font-size:0.75rem; margin:0.3rem 0;">Vorschläge:</p>',
+                    '<p style="color:#666; font-size:0.75rem; margin:0.3rem 0;">Fragen:</p>',
                     unsafe_allow_html=True,
                 )
 
-            # Full-width suggestion buttons
-            available_qs = questions[:5]
-            for q in available_qs:
-                q_text = german_questions.get(q.id, q.text)
-                btn_key = f"q_{q.id}_{scenario_id}"
+            # Two standard question buttons
+            for q_type, q_text in question_buttons:
+                btn_key = f"q_{q_type}_{scenario_id}"
                 if st.button(
                     f"💬 {q_text}", key=btn_key, use_container_width=True, type="secondary"
                 ):
                     st.session_state.chat_history.append({"role": "user", "content": q_text})
-                    response = get_numeric_response(q.id)
+                    response = get_response(q_type)
                     st.session_state.chat_history.append({"role": "ai", "content": response})
-                    st.session_state.current_trial.questions_asked.append(q.id)
+                    st.session_state.current_trial.questions_asked.append(q_type)
                     st.session_state.current_trial.question_timestamps.append(
                         datetime.now().isoformat()
                     )
                     st.rerun()
 
-            # Text input for custom questions
-            user_input = st.text_input(
-                "Eigene Frage",
-                placeholder="Oder eigene Frage eingeben...",
-                key=f"chat_input_{scenario_id}",
-                label_visibility="collapsed",
+            # Third question with free text input: "Berücksichtigt das Modell ___?"
+            st.markdown(
+                '<p style="color:#666; font-size:0.7rem; margin:0.5rem 0 0.2rem 0;">Prüfen Sie einen Begriff:</p>',
+                unsafe_allow_html=True,
             )
-            if user_input:
-                st.session_state.chat_history.append({"role": "user", "content": user_input})
-                st.session_state.chat_history.append(
-                    {
-                        "role": "ai",
-                        "content": f"Diese Frage kann ich leider nicht beantworten. Nutzen Sie die Vorschläge oben für Details zu meiner Prognose von {scenario.ai_forecast} Einheiten.",
-                    }
+            check_col1, check_col2 = st.columns([3, 1])
+            with check_col1:
+                check_term = st.text_input(
+                    "Begriff prüfen",
+                    placeholder="z.B. Schulferien, Fußball...",
+                    key=f"check_term_{scenario_id}",
+                    label_visibility="collapsed",
                 )
-                st.rerun()
+            with check_col2:
+                if st.button("Prüfen", key=f"check_btn_{scenario_id}", use_container_width=True):
+                    if check_term:
+                        question_text = f"Berücksichtigt das Modell '{check_term}'?"
+                        st.session_state.chat_history.append({"role": "user", "content": question_text})
+                        response = get_response("check_feature", check_term)
+                        st.session_state.chat_history.append({"role": "ai", "content": response})
+                        st.session_state.current_trial.questions_asked.append(f"check:{check_term}")
+                        st.session_state.current_trial.question_timestamps.append(
+                            datetime.now().isoformat()
+                        )
+                        st.rerun()
 
 
 def page_complete():
