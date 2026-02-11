@@ -156,17 +156,14 @@ scenarios:
 
     narrative: |
       Sie sind verantwortlich für die Frischeabteilung bei EDEKA Trabold in
-      Würzburg-Zellerau. Morgen ist Donnerstag, der 12. Juni - ein normaler
-      Wochentag in der Monatsmitte.
+      Würzburg-Zellerau. Morgen ist Donnerstag, der 12. Juni.
 
-      Die Wettervorhersage zeigt angenehme Temperaturen um 24°C ohne Regen.
-      Es ist eine normale Woche ohne besondere Ereignisse oder Feiertage.
-      Die Salate haben den regulären Preis (€3,20).
+      Die Wettervorhersage zeigt 24°C und sonnig. Es ist eine normale
+      Arbeitswoche - keine Feiertage, keine Schulferien, keine besonderen
+      Ereignisse in der Stadt. Die Salate haben den regulären Preis.
 
-      Das Geschäft hat kürzlich die Regalbeschilderung in der Obst- und
-      Gemüseabteilung aktualisiert. Der Kundenverkehr war diese Woche
-      gleichmäßig, nichts Ungewöhnliches zu berichten. Letzter Donnerstag
-      war ein typischer Tag.
+      Diese Woche läuft alles wie gewohnt. Die Verkäufe der letzten Tage
+      waren durchschnittlich, nichts deutet auf ungewöhnliche Nachfrage hin.
 
     demand_history: [48, 35, 38, 42, 44, 52, 46, 47, 34, 39, 43, 45, 51, 48]
 
@@ -244,17 +241,12 @@ scenarios:
       Sie verwalten die Tiefkühldesserts bei Tegut in Würzburg-Sanderau.
       Morgen ist Freitag, der 18. Juli.
 
-      Die Wettervorhersage zeigt einen warmen und sonnigen Tag mit
-      Temperaturen bis 28°C. Kein Regen erwartet. Es ist ein regulärer
-      Freitag mit Standardpreisen für alle Eisprodukte.
+      Die Wettervorhersage zeigt 28°C und sonnig - perfektes Eiswetter.
 
-      Morgen ist der erste Tag der Sommerferien in Bayern. Viele Familien
-      bereiten sich auf die Ferienzeit vor. Sie haben diese Woche mehr
-      Kinder im Laden bemerkt, da die Schulen auslaufen.
-
-      Die Eis-Kühltruhe des Ladens wurde letzte Woche gewartet und
-      funktioniert einwandfrei. Eine neue Mango-Sorbet-Sorte wurde
-      kürzlich ins Sortiment aufgenommen.
+      Wichtig: Morgen beginnen die Sommerferien in Bayern. Ab morgen
+      sind die Kinder sechs Wochen zu Hause. Ihre Erfahrung aus den
+      letzten Jahren zeigt, dass der Ferienstart die Eisnachfrage um
+      ca. 25-35% erhöht - Familien kaufen für die Ferienzeit ein.
 
     demand_history: [42, 38, 45, 48, 52, 58, 55, 44, 40, 47, 50, 54, 60, 56]
 
@@ -334,13 +326,12 @@ scenarios:
       Sie sind verantwortlich für Fertiggerichte bei EDEKA Trabold in
       Würzburg-Zellerau. Morgen ist Freitag, der 5. September.
 
-      Das Wetter wird mild sein, etwa 18°C ohne Regen. Es ist ein
-      normaler Freitag - keine besonderen Events oder Feiertage.
-      Fertiggerichte haben den Standardpreis.
+      Das Wetter wird mild bei 18°C, kein Regen. Ein ganz normaler
+      Freitag - die Schule hat regulär, keine Feiertage, keine
+      besonderen Events in Würzburg. Fertiggerichte zum Standardpreis.
 
-      Das Geschäft führt diese Woche Schulungen für neue Mitarbeiter
-      durch, aber das beeinflusst die Produktverfügbarkeit nicht.
-      Die Verkäufe waren gleichmäßig, typisch für Anfang September.
+      Die Verkäufe diese Woche waren durchschnittlich. Freitags kaufen
+      die Leute wie gewohnt für das Wochenende ein.
 
     demand_history: [58, 52, 55, 60, 68, 62, 58, 56, 51, 54, 59, 67, 61, 57]
 
@@ -417,17 +408,13 @@ scenarios:
       Sie verwalten die Backwarenabteilung bei Tegut in Würzburg-Sanderau.
       Morgen ist Samstag, der 9. August.
 
-      Die Wettervorhersage zeigt einen warmen Sommertag bei 26°C, sonnig
-      ohne Regen. Die handwerklichen Brote haben den regulären Preis.
-      Es ist ein typischer Samstag im Geschäftskalender.
+      Das Wetter: 26°C und sonnig - perfekt für draußen.
 
-      Morgen beginnt das Würzburger Stadtfest in der Innenstadt -
-      das beliebte Event erstreckt sich entlang der Einkaufsstraßen mit
-      Essständen, Live-Musik und Kunsthandwerk. Viele Einheimische
-      werden unterwegs sein.
-
-      Die Bäckereiöfen haben ihre planmäßige Wartung früher in der
-      Woche abgeschlossen und laufen einwandfrei.
+      Wichtig: Morgen beginnt das Würzburger Stadtfest direkt in der
+      Nähe Ihres Geschäfts. Das Fest zieht jedes Jahr tausende Besucher
+      an, die durch das Viertel laufen. Letztes Jahr während des
+      Stadtfests haben Sie etwa 15% mehr Backwaren verkauft als an
+      einem normalen Samstag.
 
     demand_history: [52, 48, 45, 50, 53, 68, 62, 54, 49, 46, 51, 54, 70, 64]
 
@@ -507,20 +494,17 @@ scenarios:
       Sie verwalten die Frischeabteilung bei EDEKA Trabold in
       Würzburg-Zellerau. Morgen ist Mittwoch, der 25. Juni.
 
-      Die offizielle Wettervorhersage von heute Morgen zeigt 27°C und
-      sonnig. Allerdings haben Sie mehrere Wetter-Apps gecheckt und
-      festgestellt, dass sie sich nicht einig sind. Das lokale
-      Wetterradar zeigt Regenwolken, die sich von Westen aufbauen,
-      und Ihre Wetter-App zeigt jetzt eine 70% Chance auf Nachmittags-
-      regen.
+      Achtung beim Wetter: Die offizielle Vorhersage von heute Morgen
+      zeigt 27°C und sonnig. ABER: Sie haben gerade das aktuelle
+      Wetterradar gecheckt - ein Regengebiet zieht von Westen heran.
+      Ihre Handy-App zeigt jetzt 70% Regenwahrscheinlichkeit am
+      Nachmittag.
 
-      Das Geschäft hat kürzlich einen Vertrag mit einem neuen Bio-Salat-
-      Lieferanten unterschrieben. Salate haben diese Woche den regulären
-      Preis.
+      Sie wissen aus Erfahrung: Bei Regen sinkt der Salatverkauf um
+      etwa 15-20%. Die Leute haben dann weniger Lust auf kalte Salate.
 
-      Sie wissen aus Erfahrung, dass regnerische Tage den Salatverkauf
-      deutlich reduzieren - Leute verzichten auf frische Salate, wenn
-      das Wetter umschlägt.
+      Die KI-Prognose nutzt die Morgenvorhersage (27°C, sonnig) und
+      weiß nichts von der geänderten Wetterlage.
 
     demand_history: [50, 36, 42, 45, 48, 54, 51, 49, 35, 41, 44, 47, 53, 50]
 
@@ -600,17 +584,17 @@ scenarios:
       Sie verwalten Tiefkühldesserts bei Tegut in Würzburg-Sanderau.
       Morgen ist Sonntag, der 27. Juli.
 
-      Die Wettervorhersage zeigt einen angenehmen Sommertag bei 25°C
-      mit Sonnenschein und keinem Regen. Eis hat den regulären Preis,
-      keine Aktionen diese Woche.
+      Das Wetter: 25°C und sonnig - gutes Sommerwetter.
 
-      Der Parkplatz des Geschäfts wird teilweise neu gepflastert -
-      etwa die Hälfte der Plätze ist gesperrt, aber das Geschäft
-      ist vom Seiteneingang voll erreichbar. Der Elektronikmarkt
-      nebenan wird auch renoviert mit etwas Baulärm tagsüber.
+      Hinweis: Der Parkplatz wird teilweise neu gepflastert, etwa
+      die Hälfte der Plätze ist gesperrt. Das Geschäft ist aber vom
+      Seiteneingang voll erreichbar. Auch der Elektronikmarkt nebenan
+      renoviert (etwas Baulärm).
 
-      Es ist ein regulärer Sommersonntag ohne größere Events in der
-      Gegend.
+      Ansonsten ein ganz normaler Sommersonntag - keine Feste, keine
+      Schulferien, keine besonderen Ereignisse. Die Parkplatzsituation
+      hatte in der Vergangenheit keinen messbaren Einfluss auf Ihre
+      Verkäufe.
 
     demand_history: [40, 36, 44, 48, 52, 58, 54, 42, 38, 46, 50, 54, 60, 55]
 
@@ -686,16 +670,16 @@ scenarios:
       Sie sind verantwortlich für Fertiggerichte bei EDEKA Trabold in
       Würzburg-Zellerau. Morgen ist Samstag, der 31. Mai.
 
-      Das Wetter wird mild bei 20°C sein, trockene Bedingungen erwartet.
-      Fertiggerichte haben den Standardpreis.
+      Das Wetter: 20°C, trocken.
 
-      Morgen Abend ist das Champions League Finale - der FC Bayern
-      spielt. Die ganze Stadt ist aufgeregt wegen des Spiels. Viele
-      Leute planen Fernsehpartys zu Hause. Anstoß ist um 21 Uhr.
+      Wichtig: Morgen Abend ist das Champions League Finale - der
+      FC Bayern spielt! Anstoß 21 Uhr. Die ganze Stadt ist aufgeregt,
+      viele Leute planen Fernsehpartys zu Hause.
 
-      Das Geschäft hat kürzlich begonnen, eine neue italienische
-      Fertiggericht-Marke zu führen, aber diese ist separat von
-      Ihrem regulären Produktsortiment.
+      Ihre Erfahrung mit großen Fußballspielen: Bei wichtigen Bayern-
+      Spielen steigt die Nachfrage nach Fertiggerichten um 30-40%.
+      Die Leute wollen schnelles Essen, das sie vorm Fernseher
+      genießen können.
 
     demand_history: [56, 50, 52, 58, 70, 65, 60, 55, 49, 51, 57, 68, 64, 59]
 
@@ -776,17 +760,15 @@ scenarios:
       Sie verwalten die Bäckerei bei Tegut in Würzburg-Sanderau.
       Morgen ist Samstag, der 13. September.
 
-      Die Wettervorhersage zeigt einen angenehmen Herbsttag bei 19°C,
-      trocken mit teilweise bewölkt. Brot hat den regulären Preis.
+      Das Wetter: 19°C, trocken und teilweise bewölkt.
 
-      Morgen ist Wochenmarkttag auf dem Marktplatz, nur zwei Straßen
-      von Ihrem Geschäft entfernt. Der Markt hat mehrere handwerkliche
-      Bäcker, die frisches Sauerteigbrot, Brezeln und Gebäck verkaufen.
-      Er läuft von 7 bis 14 Uhr und zieht viele Besucher an.
+      Wichtig: Morgen ist Wochenmarkt auf dem Marktplatz - nur zwei
+      Straßen entfernt! Der Markt läuft von 7-14 Uhr und hat mehrere
+      handwerkliche Bäckerstände mit Sauerteigbrot, Brezeln und Gebäck.
 
-      Der Bäckerei-Lieferplan hat sich diese Woche geändert - Brot
-      kommt jetzt eine Stunde früher, aber die Produktverfügbarkeit
-      ist nicht betroffen.
+      Ihre Erfahrung mit Markttagen: Wenn der Wochenmarkt stattfindet,
+      sinkt Ihr Backwarenverkauf um etwa 15-20%, weil viele Kunden
+      ihr Brot beim Markt kaufen statt bei Ihnen.
 
     demand_history: [52, 48, 44, 50, 52, 68, 60, 53, 49, 45, 51, 53, 66, 58]
 
@@ -866,17 +848,18 @@ scenarios:
       Sie verwalten die Frischeabteilung bei EDEKA Trabold in
       Würzburg-Zellerau. Morgen ist Freitag, der 18. April.
 
-      Die Wettervorhersage zeigt angenehme Frühlingstemperaturen
-      bei 22°C mit Sonnenschein. Salate haben den regulären Preis.
+      Das Wetter: 22°C und sonnig - schöner Frühlingstag.
 
-      Die Würzburger Kickers haben morgen Abend ein Heimspiel gegen
-      ein Mittelfeld-Team. Es ist ein normales Ligaspiel, kein
-      Großereignis. Das Geschäft ist nicht besonders nah am
-      Stadionbereich.
+      Info: Die Würzburger Kickers haben morgen Abend ein Heimspiel
+      (3. Liga, normales Saisonspiel gegen ein Mittelfeld-Team). Das
+      Stadion ist aber am anderen Ende der Stadt, weit weg von Ihrem
+      Geschäft.
 
-      Die Supermarktkette führt diesen Monat eine regionale
-      Werbekampagne durch, obwohl diese nicht speziell Salate
-      bewirbt.
+      Ihre Erfahrung: Normale Kickers-Spiele haben praktisch keinen
+      Einfluss auf Ihren Salatverkauf. Die Fans gehen ins Stadion,
+      aber das betrifft Ihre Kundschaft in Zellerau nicht.
+
+      Ansonsten ein normaler Freitag ohne weitere Besonderheiten.
 
     demand_history: [46, 34, 40, 44, 48, 54, 50, 47, 35, 41, 45, 49, 55, 51]
 
@@ -954,17 +937,16 @@ scenarios:
       Sie verwalten Tiefkühldesserts bei Tegut in Würzburg-Sanderau.
       Morgen ist Samstag, der 2. August.
 
-      Eine Hitzewelle trifft Würzburg - die Vorhersage zeigt 32°C,
-      der bisher heißeste Tag des Sommers. Sonnig und trocken den
-      ganzen Tag erwartet.
+      Das Wetter: 32°C - Hitzewelle! Der heißeste Tag des Sommers.
+      Die KI berücksichtigt diese Temperatur bereits in ihrer Prognose.
 
-      Es ist mitten in den Sommerferien. Außerdem findet das
-      Kiliani-Volksfest auf der Talavera statt, etwa 15 Gehminuten
-      von Ihrem Geschäft entfernt. Das Fest zieht täglich tausende
-      Besucher für Fahrgeschäfte, Essen und Unterhaltung an.
+      Wichtig: Es ist Kiliani-Volksfest auf der Talavera, nur 15
+      Gehminuten von Ihrem Geschäft entfernt! Das größte Volksfest
+      der Region - täglich kommen tausende Besucher.
 
-      Das Geschäft hat kürzlich eine neue Display-Kühltruhe mit
-      besserer Sichtbarkeit am Eingang installiert.
+      Ihre Erfahrung: Während des Kiliani steigt die Eisnachfrage
+      um 40-50% - die Festbesucher kommen auf dem Weg zum Fest oder
+      danach bei Ihnen vorbei, besonders bei dieser Hitze.
 
     demand_history: [44, 40, 50, 58, 68, 75, 70, 46, 42, 52, 60, 70, 78, 72]
 
