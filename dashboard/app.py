@@ -17,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.experiment import ScenarioLoader
 from src.tracking import FileStorage, ParticipantSession
+from src.agent import LLMResponder
 
 # Configuration
 DATA_DIR = Path(__file__).parent.parent / "data"
@@ -262,9 +263,15 @@ def init_session_state():
         st.session_state.chat_history = []
         st.session_state.storage = FileStorage(RESULTS_DIR)
         st.session_state.store_location = STORES[0]
+        st.session_state.llm_responder = None  # LLM responder instance
 
-        # Check for quick-start mode via query param: ?dashboard=true
+        # Check for query params
         params = st.query_params
+
+        # LLM mode: ?llm=true enables real LLM responses
+        st.session_state.use_llm = params.get("llm") == "true"
+
+        # Quick-start mode: ?dashboard=true
         if params.get("dashboard") == "true":
             # Auto-setup: random store, create session, skip to main task
             st.session_state.store_location = random.choice(STORES)
@@ -561,6 +568,14 @@ def page_main_task():
             optimal_order=scenario.optimal_order,
         )
         st.session_state.chat_history = []
+
+        # Initialize LLM responder if in LLM mode
+        if st.session_state.use_llm:
+            product_config = loader.products.get(scenario.product, {})
+            st.session_state.llm_responder = LLMResponder(
+                scenario_config=scenario.full_config,
+                product_config=product_config,
+            )
 
     agent = AgentResponder(scenario.full_config)
 
@@ -924,6 +939,19 @@ def page_main_task():
 
         # Generate responses based on question type
         def get_response(q_type: str, custom_term: str = None) -> str:
+            # Use LLM if available and enabled
+            if st.session_state.use_llm and st.session_state.llm_responder:
+                llm = st.session_state.llm_responder
+                if q_type == "model_features":
+                    return llm.ask("Welche Daten nutzt das Modell?")
+                elif q_type == "calculation":
+                    return llm.ask("Wie berechnet sich die Prognose?")
+                elif q_type == "check_feature" and custom_term:
+                    return llm.ask(f"Berücksichtigt das Modell '{custom_term}'?")
+                else:
+                    return llm.ask(custom_term or "Erkläre das Modell.")
+
+            # Fallback to canned responses
             ci_low = int(scenario.ai_forecast * 0.85)
             ci_high = int(scenario.ai_forecast * 1.15)
 
