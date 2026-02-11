@@ -1,0 +1,1029 @@
+# Szenario-Backlog für Agentic Newsvendor Studie
+# Version: 1.0
+# Letzte Aktualisierung: 2024-02-09
+
+# =============================================================================
+# SZENARIO-MATRIX
+# =============================================================================
+#
+# Balance: 5 "KI vertrauen" + 5 "Anpassung nötig"
+# Produkte: 3 Salat, 3 Eis, 2 Fertiggerichte, 2 Backwaren
+#
+# | ID  | Produkt       | Versteckter Faktor | KI-Qualität | Aktion      |
+# |-----|---------------|-------------------|-------------|-------------|
+# | S01 | Salat         | Keiner            | Gut         | Vertrauen   |
+# | S02 | Eis           | Schulferien       | Unter       | Erhöhen ↑   |
+# | S03 | Fertiggericht | Keiner            | Gut         | Vertrauen   |
+# | S04 | Backwaren     | Straßenfest       | Unter       | Erhöhen ↑   |
+# | S05 | Salat         | Wetter falsch     | Über        | Reduzieren ↓|
+# | S06 | Eis           | Keiner (Rauschen) | Gut         | Vertrauen   |
+# | S07 | Fertiggericht | Fußballspiel      | Unter       | Erhöhen ↑   |
+# | S08 | Backwaren     | Wochenmarkt       | Über        | Reduzieren ↓|
+# | S09 | Salat         | Kleines Event     | Gut         | Vertrauen*  |
+# | S10 | Eis           | Fest + Hitze      | Unter       | Erhöhen ↑   |
+#
+# * S09: Event vorhanden aber kleiner Effekt für Salat - testet Über-Anpassung
+# =============================================================================
+
+defaults:
+  currency: "€"
+  location: "Würzburg Supermarkt"
+
+products:
+  fresh_salad:
+    display_name: "Frischer Salat-Mix (400g)"
+    base_level: 45
+    price: 3.20
+    cost: 1.60
+    salvage: 0.40
+    profit_per_unit: 1.60
+    loss_per_unit: 1.20
+    noise_std: 4.0
+
+    visible_betas:
+      temperature: 0.8
+      rain: -5.0
+      weekday_friday: 4.0
+      weekday_saturday: 6.0
+      promotion: 8.0
+
+    hidden_betas:
+      sports_event: 3.0
+      school_holiday: 4.0
+      local_festival: 6.0
+      competitor_closed: 5.0
+
+  ice_cream:
+    display_name: "Premium Eis (500ml)"
+    base_level: 35
+    price: 4.99
+    cost: 2.50
+    salvage: 0.00
+    profit_per_unit: 2.49
+    loss_per_unit: 2.50
+    noise_std: 5.0
+
+    visible_betas:
+      temperature: 1.5
+      rain: -8.0
+      weekday_friday: 5.0
+      weekday_saturday: 10.0
+      weekday_sunday: 8.0
+      promotion: 12.0
+
+    hidden_betas:
+      sports_event: 8.0
+      school_holiday: 20.0
+      local_festival: 15.0
+      competitor_closed: 8.0
+
+  ready_meals:
+    display_name: "Frische Fertiggerichte"
+    base_level: 55
+    price: 5.99
+    cost: 3.00
+    salvage: 1.00
+    profit_per_unit: 2.99
+    loss_per_unit: 2.00
+    noise_std: 5.0
+
+    visible_betas:
+      temperature: -0.3
+      rain: 4.0
+      weekday_friday: 12.0
+      weekday_saturday: 8.0
+      promotion: 15.0
+
+    hidden_betas:
+      sports_event: 25.0
+      school_holiday: -5.0
+      local_festival: 5.0
+      competitor_closed: 10.0
+
+  fresh_bakery:
+    display_name: "Handwerkliches Brot"
+    base_level: 50
+    price: 3.49
+    cost: 1.75
+    salvage: 0.35
+    profit_per_unit: 1.74
+    loss_per_unit: 1.40
+    noise_std: 4.0
+
+    visible_betas:
+      temperature: 0.2
+      rain: -2.0
+      weekday_friday: 3.0
+      weekday_saturday: 15.0
+      weekday_sunday: 12.0
+      promotion: 10.0
+
+    hidden_betas:
+      sports_event: 5.0
+      school_holiday: 8.0
+      local_festival: 10.0
+      local_market: -12.0
+
+# =============================================================================
+# SZENARIEN
+# =============================================================================
+
+scenarios:
+
+  # ---------------------------------------------------------------------------
+  # S01: Frischer Salat - Normaler Tag (KI VERTRAUEN)
+  # ---------------------------------------------------------------------------
+  S01:
+    id: "S01"
+    product: "fresh_salad"
+    date: "Donnerstag, 12. Juni"
+    scenario_type: "trust_ai"
+    difficulty: "easy"
+
+    features:
+      visible:
+        temperature: 24
+        rain: false
+        weekday: "Donnerstag"
+        price: 3.20
+        promotion: false
+      hidden:
+        sports_event: false
+        school_holiday: false
+        local_festival: false
+      noise:
+        - "neue_regalbeschilderung"
+
+    narrative: |
+      Sie sind verantwortlich für die Frischeabteilung bei EDEKA Trabold in
+      Würzburg-Zellerau. Morgen ist Donnerstag, der 12. Juni - ein normaler
+      Wochentag in der Monatsmitte.
+
+      Die Wettervorhersage zeigt angenehme Temperaturen um 24°C ohne Regen.
+      Es ist eine normale Woche ohne besondere Ereignisse oder Feiertage.
+      Die Salate haben den regulären Preis (€3,20).
+
+      Das Geschäft hat kürzlich die Regalbeschilderung in der Obst- und
+      Gemüseabteilung aktualisiert. Der Kundenverkehr war diese Woche
+      gleichmäßig, nichts Ungewöhnliches zu berichten. Letzter Donnerstag
+      war ein typischer Tag.
+
+    demand_history: [48, 35, 38, 42, 44, 52, 46, 47, 34, 39, 43, 45, 51, 48]
+
+    computed:
+      ai_forecast: 52
+      ai_recommendation: 56
+      true_expected_demand: 52
+      optimal_order: 56
+      actual_demand: 54
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Salate: ~45 Einheiten
+        • Temperatur (24°C): +3 Einheiten (warmes Wetter erhöht Salatverkauf)
+        • Donnerstag: +4 Einheiten (Wochenmitte-Anstieg)
+        • Kein Regen: Basis
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 52 Einheiten
+
+      confidence: |
+        Ich bin recht zuversichtlich bei dieser Prognose. Bei ähnlichen
+        Bedingungen in der Vergangenheit lag die tatsächliche Nachfrage
+        in etwa 70% der Fälle innerhalb von ±6 Einheiten meiner Vorhersage.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Temperatur, Niederschlag, Wochentag,
+        aktueller Preis und ob eine Aktion läuft. Ich schaue auch auf
+        aktuelle historische Verkaufsmuster für dieses Produkt.
+
+      why_order_more: |
+        Ich empfehle 56 Einheiten zu bestellen (4 mehr als die Prognose),
+        weil Fehlmengen teurer sind als Überschüsse. Jeder verpasste
+        Verkauf kostet €1,60 Gewinn, während jeder unverkaufte Salat
+        nur €1,20 kostet (Kosten minus Restwert). Diese Asymmetrie
+        bedeutet, dass leichtes Überbestellen besser ist.
+
+      consider_specific: |
+        Ich sehe keine besonderen Ereignisse oder ungewöhnlichen Faktoren
+        für morgen. Meine Prognose spiegelt einen typischen Donnerstag
+        mit gutem Wetter wider.
+
+      what_missing: |
+        Ich habe keine Informationen über lokale Veranstaltungen,
+        Schulpläne oder Wettbewerberaktivitäten. Wenn Sie von etwas
+        Ungewöhnlichem in der Nähe wissen, sollten Sie das berücksichtigen.
+
+  # ---------------------------------------------------------------------------
+  # S02: Eis - Schulferienstart (NACH OBEN ANPASSEN)
+  # ---------------------------------------------------------------------------
+  S02:
+    id: "S02"
+    product: "ice_cream"
+    date: "Freitag, 18. Juli"
+    scenario_type: "override_up"
+    difficulty: "medium"
+
+    features:
+      visible:
+        temperature: 28
+        rain: false
+        weekday: "Freitag"
+        price: 4.99
+        promotion: false
+      hidden:
+        sports_event: false
+        school_holiday: true
+        local_festival: false
+      noise:
+        - "kuehlschrank_gewartet"
+        - "neue_geschmacksrichtung"
+
+    narrative: |
+      Sie verwalten die Tiefkühldesserts bei Tegut in Würzburg-Sanderau.
+      Morgen ist Freitag, der 18. Juli.
+
+      Die Wettervorhersage zeigt einen warmen und sonnigen Tag mit
+      Temperaturen bis 28°C. Kein Regen erwartet. Es ist ein regulärer
+      Freitag mit Standardpreisen für alle Eisprodukte.
+
+      Morgen ist der erste Tag der Sommerferien in Bayern. Viele Familien
+      bereiten sich auf die Ferienzeit vor. Sie haben diese Woche mehr
+      Kinder im Laden bemerkt, da die Schulen auslaufen.
+
+      Die Eis-Kühltruhe des Ladens wurde letzte Woche gewartet und
+      funktioniert einwandfrei. Eine neue Mango-Sorbet-Sorte wurde
+      kürzlich ins Sortiment aufgenommen.
+
+    demand_history: [42, 38, 45, 48, 52, 58, 55, 44, 40, 47, 50, 54, 60, 56]
+
+    computed:
+      ai_forecast: 65
+      ai_recommendation: 72
+      true_expected_demand: 85
+      optimal_order: 93
+      actual_demand: 88
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Eis: ~35 Einheiten
+        • Temperatur (28°C): +12 Einheiten (sehr warm = starke Eisnachfrage)
+        • Freitag: +5 Einheiten
+        • Kein Regen: +8 Einheiten vs. Regenbasis
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 65 Einheiten
+
+      confidence: |
+        Ich bin mäßig zuversichtlich. Sommerwetter-Vorhersagen sind
+        normalerweise zuverlässig, und Eisnachfrage korreliert stark
+        mit der Temperatur. Typische Abweichung ist ±8 Einheiten bei
+        ähnlichen Bedingungen.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Temperatur (sehr wichtig für Eis),
+        Sonnenschein, Niederschlag, Wochentag, Preise und Aktionen.
+        Eis ist eines der wetterempfindlichsten Produkte.
+
+      why_order_more: |
+        Ich empfehle 72 Einheiten (7 mehr als Prognose), weil Eis
+        keinen Restwert hat - unverkaufte Artikel sind ein kompletter
+        Verlust von €2,50 pro Stück. Aber verpasste Verkäufe kosten
+        auch €2,49 Gewinn. Die Kosten sind fast symmetrisch, also
+        bestelle ich leicht über der Prognose.
+
+      consider_school_holiday: |
+        Ich habe keinen Zugang zu Schulferienkalendern. Meine Prognose
+        basiert auf Wetter, Wochentag und historischen Mustern. Wenn
+        Schulferien typischerweise die Eisnachfrage nach Ihrer Erfahrung
+        beeinflussen, sollten Sie entsprechend anpassen.
+
+      what_missing: |
+        Ich habe keine Informationen über Schulpläne, lokale Events
+        oder besondere Anlässe. Familien mit Kindern kaufen tendenziell
+        mehr Eis - wenn Sie mehr Familien beim Einkaufen erwarten,
+        erwägen Sie eine Anpassung nach oben.
+
+  # ---------------------------------------------------------------------------
+  # S03: Fertiggerichte - Normaler Freitag (KI VERTRAUEN)
+  # ---------------------------------------------------------------------------
+  S03:
+    id: "S03"
+    product: "ready_meals"
+    date: "Freitag, 5. September"
+    scenario_type: "trust_ai"
+    difficulty: "easy"
+
+    features:
+      visible:
+        temperature: 18
+        rain: false
+        weekday: "Freitag"
+        price: 5.99
+        promotion: false
+      hidden:
+        sports_event: false
+        school_holiday: false
+        local_festival: false
+      noise:
+        - "mitarbeiterschulung"
+
+    narrative: |
+      Sie sind verantwortlich für Fertiggerichte bei EDEKA Trabold in
+      Würzburg-Zellerau. Morgen ist Freitag, der 5. September.
+
+      Das Wetter wird mild sein, etwa 18°C ohne Regen. Es ist ein
+      normaler Freitag - keine besonderen Events oder Feiertage.
+      Fertiggerichte haben den Standardpreis.
+
+      Das Geschäft führt diese Woche Schulungen für neue Mitarbeiter
+      durch, aber das beeinflusst die Produktverfügbarkeit nicht.
+      Die Verkäufe waren gleichmäßig, typisch für Anfang September.
+
+    demand_history: [58, 52, 55, 60, 68, 62, 58, 56, 51, 54, 59, 67, 61, 57]
+
+    computed:
+      ai_forecast: 67
+      ai_recommendation: 72
+      true_expected_demand: 67
+      optimal_order: 72
+      actual_demand: 69
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Fertiggerichte: ~55 Einheiten
+        • Temperatur (18°C): +1 Einheit (mild, leicht positiv)
+        • Freitag: +12 Einheiten (starker Wochenend-Vorbereitungseffekt)
+        • Kein Regen: Basis
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 67 Einheiten
+
+      confidence: |
+        Ich bin zuversichtlich bei dieser Prognose. Die Nachfrage nach
+        Fertiggerichten am Freitag ist recht vorhersagbar - Leute decken
+        sich fürs Wochenende ein. Historische Genauigkeit für ähnliche
+        Freitage liegt bei ±5 Einheiten in etwa 75% der Fälle.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Wochentag (sehr wichtig - Freitage
+        sind Spitze), Wetter, Temperatur, Preise und Aktionen.
+        Fertiggerichte sind weniger wetterempfindlich als Frischware.
+
+      why_order_more: |
+        Ich empfehle 72 Einheiten (5 mehr als Prognose). Fertiggerichte
+        haben etwas Restwert (€1,00), also ist der Verlust bei unverkauften
+        Artikeln €2,00. Verpasste Verkäufe kosten €2,99 Gewinn. Da
+        Fehlmengen teurer sind, tendiere ich zu etwas mehr Bestellung.
+
+      consider_specific: |
+        Ich sehe keine besonderen Faktoren für morgen. Es sieht aus
+        wie ein typischer Freitag mit normalen Nachfragemustern.
+
+      what_missing: |
+        Ich verfolge keine lokalen Events oder Wettbewerberaktionen.
+        Wenn es ein Sportereignis gibt oder etwas, das Leute zu Hause
+        hält, könnte sich die Nachfrage nach Fertiggerichten ändern.
+        Ansonsten sollte es ein normaler Freitag sein.
+
+  # ---------------------------------------------------------------------------
+  # S04: Backwaren - Straßenfest (NACH OBEN ANPASSEN)
+  # ---------------------------------------------------------------------------
+  S04:
+    id: "S04"
+    product: "fresh_bakery"
+    date: "Samstag, 9. August"
+    scenario_type: "override_up"
+    difficulty: "medium"
+
+    features:
+      visible:
+        temperature: 26
+        rain: false
+        weekday: "Samstag"
+        price: 3.49
+        promotion: false
+      hidden:
+        sports_event: false
+        school_holiday: false
+        local_festival: true
+      noise:
+        - "ofen_wartung_abgeschlossen"
+
+    narrative: |
+      Sie verwalten die Backwarenabteilung bei Tegut in Würzburg-Sanderau.
+      Morgen ist Samstag, der 9. August.
+
+      Die Wettervorhersage zeigt einen warmen Sommertag bei 26°C, sonnig
+      ohne Regen. Die handwerklichen Brote haben den regulären Preis.
+      Es ist ein typischer Samstag im Geschäftskalender.
+
+      Morgen beginnt das Würzburger Stadtfest in der Innenstadt -
+      das beliebte Event erstreckt sich entlang der Einkaufsstraßen mit
+      Essständen, Live-Musik und Kunsthandwerk. Viele Einheimische
+      werden unterwegs sein.
+
+      Die Bäckereiöfen haben ihre planmäßige Wartung früher in der
+      Woche abgeschlossen und laufen einwandfrei.
+
+    demand_history: [52, 48, 45, 50, 53, 68, 62, 54, 49, 46, 51, 54, 70, 64]
+
+    computed:
+      ai_forecast: 71
+      ai_recommendation: 76
+      true_expected_demand: 81
+      optimal_order: 86
+      actual_demand: 79
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Backwaren: ~50 Einheiten
+        • Temperatur (26°C): +1 Einheit (geringer positiver Effekt)
+        • Samstag: +15 Einheiten (starker Wochenend-Brunch-Effekt)
+        • Kein Regen: +2 Einheiten
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 71 Einheiten
+
+      confidence: |
+        Ich bin zuversichtlich bei dieser Prognose. Die Samstags-
+        Backwarennachfrage folgt einem konsistenten Muster - Wochenend-
+        Brunches treiben den Verkauf. Das Wetter ist günstig. Typische
+        Genauigkeit: ±5 Einheiten.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Wochentag (Samstage sind Spitze für
+        Backwaren), Wetterbedingungen, Preise und Aktionen. Wochenend-
+        Vormittage sehen den höchsten Backwarenverkehr.
+
+      why_order_more: |
+        Ich empfehle 76 Einheiten (5 mehr als Prognose). Frisches Brot
+        hat begrenzten Restwert (€0,35 für Paniermehl/Spenden). Jeder
+        verpasste Verkauf kostet €1,74 Gewinn, während unverkaufte
+        Artikel €1,40 kosten. Leichtes Überbestellen ist sicherer.
+
+      consider_street_festival: |
+        Ich habe keine Informationen über lokale Events oder Feste.
+        Meine Prognose spiegelt typische Samstagsmuster wider. Wenn
+        erhöhter Fußgängerverkehr in der Nähe erwartet wird, sollten
+        Sie Ihre Bestellung vielleicht anpassen.
+
+      what_missing: |
+        Ich verfolge keine Nachbarschaftsevents, Wochenmärkte oder
+        Gemeinschaftsveranstaltungen. Diese können die Backwaren-
+        nachfrage an Wochenenden erheblich beeinflussen. Wenn Sie
+        von etwas in der Nähe wissen, berücksichtigen Sie das.
+
+  # ---------------------------------------------------------------------------
+  # S05: Salat - Wettervorhersage falsch (NACH UNTEN ANPASSEN)
+  # ---------------------------------------------------------------------------
+  S05:
+    id: "S05"
+    product: "fresh_salad"
+    date: "Mittwoch, 25. Juni"
+    scenario_type: "override_down"
+    difficulty: "hard"
+
+    features:
+      visible:
+        temperature: 27
+        rain: false
+        weekday: "Mittwoch"
+        price: 3.20
+        promotion: false
+      hidden:
+        sports_event: false
+        school_holiday: false
+        local_festival: false
+        weather_actually: "rain_likely"
+      noise:
+        - "neuer_lieferantenvertrag"
+
+    narrative: |
+      Sie verwalten die Frischeabteilung bei EDEKA Trabold in
+      Würzburg-Zellerau. Morgen ist Mittwoch, der 25. Juni.
+
+      Die offizielle Wettervorhersage von heute Morgen zeigt 27°C und
+      sonnig. Allerdings haben Sie mehrere Wetter-Apps gecheckt und
+      festgestellt, dass sie sich nicht einig sind. Das lokale
+      Wetterradar zeigt Regenwolken, die sich von Westen aufbauen,
+      und Ihre Wetter-App zeigt jetzt eine 70% Chance auf Nachmittags-
+      regen.
+
+      Das Geschäft hat kürzlich einen Vertrag mit einem neuen Bio-Salat-
+      Lieferanten unterschrieben. Salate haben diese Woche den regulären
+      Preis.
+
+      Sie wissen aus Erfahrung, dass regnerische Tage den Salatverkauf
+      deutlich reduzieren - Leute verzichten auf frische Salate, wenn
+      das Wetter umschlägt.
+
+    demand_history: [50, 36, 42, 45, 48, 54, 51, 49, 35, 41, 44, 47, 53, 50]
+
+    computed:
+      ai_forecast: 58
+      ai_recommendation: 62
+      true_expected_demand: 48
+      optimal_order: 52
+      actual_demand: 46
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Salate: ~45 Einheiten
+        • Temperatur (27°C): +6 Einheiten (warmes Wetter steigert Salate)
+        • Mittwoch: +3 Einheiten
+        • Kein Regen erwartet: +4 Einheiten vs. Regenbasis
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 58 Einheiten
+
+      confidence: |
+        Ich bin recht zuversichtlich bei dieser Prognose. Das warme,
+        sonnige Wetter sollte eine gute Salatnachfrage antreiben.
+        Typische Genauigkeit bei Sommerbedingungen ist ±5 Einheiten.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Temperatur (wichtig für Salate),
+        Niederschlag (negativer Einfluss), Wochentag, Preise und
+        Aktionen. Die Salatnachfrage ist recht wetterempfindlich.
+
+      why_order_more: |
+        Ich empfehle 62 Einheiten (4 mehr als Prognose). Die
+        Kostenstruktur favorisiert leichtes Überbestellen: €1,60
+        entgangener Gewinn pro Fehlmenge vs. €1,20 Verlust pro
+        unverkauftem Artikel.
+
+      consider_weather: |
+        Ich verwende die offizielle Wettervorhersage, die 27°C und
+        sonnig zeigt. Mein Modell aktualisiert sich nicht in Echtzeit
+        mit sich ändernden Vorhersagen. Wenn Sie Grund haben zu
+        glauben, dass das Wetter anders sein wird, passen Sie
+        entsprechend an.
+
+      what_missing: |
+        Ich verwende die offizielle Wettervorhersage von heute Morgen.
+        Wettervorhersagen können sich ändern, besonders für
+        Nachmittagsbedingungen. Ich verfolge auch keine lokalen
+        Events oder Schulpläne.
+
+  # ---------------------------------------------------------------------------
+  # S06: Eis - Normaler Tag mit Störfaktoren (KI VERTRAUEN)
+  # ---------------------------------------------------------------------------
+  S06:
+    id: "S06"
+    product: "ice_cream"
+    date: "Sonntag, 27. Juli"
+    scenario_type: "trust_ai"
+    difficulty: "medium"
+
+    features:
+      visible:
+        temperature: 25
+        rain: false
+        weekday: "Sonntag"
+        price: 4.99
+        promotion: false
+      hidden:
+        sports_event: false
+        school_holiday: false
+        local_festival: false
+      noise:
+        - "parkplatz_erneuerung"
+        - "nachbargeschaeft_renovation"
+
+    narrative: |
+      Sie verwalten Tiefkühldesserts bei Tegut in Würzburg-Sanderau.
+      Morgen ist Sonntag, der 27. Juli.
+
+      Die Wettervorhersage zeigt einen angenehmen Sommertag bei 25°C
+      mit Sonnenschein und keinem Regen. Eis hat den regulären Preis,
+      keine Aktionen diese Woche.
+
+      Der Parkplatz des Geschäfts wird teilweise neu gepflastert -
+      etwa die Hälfte der Plätze ist gesperrt, aber das Geschäft
+      ist vom Seiteneingang voll erreichbar. Der Elektronikmarkt
+      nebenan wird auch renoviert mit etwas Baulärm tagsüber.
+
+      Es ist ein regulärer Sommersonntag ohne größere Events in der
+      Gegend.
+
+    demand_history: [40, 36, 44, 48, 52, 58, 54, 42, 38, 46, 50, 54, 60, 55]
+
+    computed:
+      ai_forecast: 58
+      ai_recommendation: 64
+      true_expected_demand: 58
+      optimal_order: 64
+      actual_demand: 61
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Eis: ~35 Einheiten
+        • Temperatur (25°C): +8 Einheiten (gutes Eiswetter)
+        • Sonntag: +8 Einheiten (Wochenend-Familientag)
+        • Kein Regen: +7 Einheiten vs. Basis
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 58 Einheiten
+
+      confidence: |
+        Ich bin zuversichtlich bei dieser Prognose. Sommersonntage
+        haben konsistente Eisnachfragemuster. Die Temperatur ist
+        im optimalen Bereich. Typische Genauigkeit: ±6 Einheiten.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Temperatur (sehr wichtig),
+        Sonnenschein, Niederschlag, Wochentag und Aktionen.
+        Sonntags-Familieneinkäufe treiben den Eisverkauf.
+
+      why_order_more: |
+        Ich empfehle 64 Einheiten. Eis kann nicht verwertet werden,
+        also ist es ein kompletter Verlust von €2,50 pro unverkauftem
+        Artikel. Aber Fehlmengen kosten auch €2,49. Fast symmetrisch,
+        also bestelle ich leicht über der Prognose für
+        Kundenzufriedenheit.
+
+      consider_specific: |
+        Ich sehe keine besonderen Faktoren, die morgen wirken.
+        Es sieht aus wie ein typischer Sommersonntag.
+
+      what_missing: |
+        Ich verfolge keine Geschäftsabläufe, Parksituationen oder
+        nahe Baustellen. Ich habe auch keine Daten zu lokalen Events.
+        Meine Prognose basiert nur auf Wetter- und Kalendermustern.
+
+  # ---------------------------------------------------------------------------
+  # S07: Fertiggerichte - Champions League Finale (NACH OBEN ANPASSEN)
+  # ---------------------------------------------------------------------------
+  S07:
+    id: "S07"
+    product: "ready_meals"
+    date: "Samstag, 31. Mai"
+    scenario_type: "override_up"
+    difficulty: "medium"
+
+    features:
+      visible:
+        temperature: 20
+        rain: false
+        weekday: "Samstag"
+        price: 5.99
+        promotion: false
+      hidden:
+        sports_event: true
+        school_holiday: false
+        local_festival: false
+      noise:
+        - "neue_fertiggericht_marke"
+
+    narrative: |
+      Sie sind verantwortlich für Fertiggerichte bei EDEKA Trabold in
+      Würzburg-Zellerau. Morgen ist Samstag, der 31. Mai.
+
+      Das Wetter wird mild bei 20°C sein, trockene Bedingungen erwartet.
+      Fertiggerichte haben den Standardpreis.
+
+      Morgen Abend ist das Champions League Finale - der FC Bayern
+      spielt. Die ganze Stadt ist aufgeregt wegen des Spiels. Viele
+      Leute planen Fernsehpartys zu Hause. Anstoß ist um 21 Uhr.
+
+      Das Geschäft hat kürzlich begonnen, eine neue italienische
+      Fertiggericht-Marke zu führen, aber diese ist separat von
+      Ihrem regulären Produktsortiment.
+
+    demand_history: [56, 50, 52, 58, 70, 65, 60, 55, 49, 51, 57, 68, 64, 59]
+
+    computed:
+      ai_forecast: 63
+      ai_recommendation: 68
+      true_expected_demand: 88
+      optimal_order: 94
+      actual_demand: 91
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Fertiggerichte: ~55 Einheiten
+        • Temperatur (20°C): Basis
+        • Samstag: +8 Einheiten (Wochenendeffekt)
+        • Kein Regen: Basis
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 63 Einheiten
+
+      confidence: |
+        Ich bin zuversichtlich bei dieser Prognose. Samstags-
+        Fertiggericht-Nachfrage ist vorhersagbar. Die Bedingungen
+        sehen normal aus. Typische Genauigkeit: ±5 Einheiten.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Wochentag (Samstage sind stark),
+        Wetter, Temperatur und Aktionen. Fertiggerichte erreichen
+        Spitzenwerte am Wochenende, wenn Leute bequeme Optionen
+        wollen.
+
+      why_order_more: |
+        Ich empfehle 68 Einheiten. Fertiggerichte haben €1,00
+        Restwert, also kosten unverkaufte Artikel €2,00, während
+        Fehlmengen €2,99 kosten. Die Asymmetrie favorisiert
+        Bestellung über der Prognose.
+
+      consider_football_match: |
+        Ich habe keine Informationen über Sportevents oder TV-
+        Programme. Meine Prognose basiert auf typischen Samstags-
+        mustern. Wenn es ein großes Spiel gibt, das Leute zu Hause
+        schauen, steigt die Nachfrage nach Fertiggerichten oft
+        erheblich - Leute wollen einfaches Essen für Spielabende.
+
+      what_missing: |
+        Ich verfolge keine Sportpläne, TV-Events oder soziale
+        Zusammenkünfte. Große Spiele, bei denen Leute zu Hause
+        bleiben, können die Nachfrage nach bequemen Essensoptionen
+        erheblich steigern.
+
+  # ---------------------------------------------------------------------------
+  # S08: Backwaren - Wochenmarkt-Konkurrenz (NACH UNTEN ANPASSEN)
+  # ---------------------------------------------------------------------------
+  S08:
+    id: "S08"
+    product: "fresh_bakery"
+    date: "Samstag, 13. September"
+    scenario_type: "override_down"
+    difficulty: "medium"
+
+    features:
+      visible:
+        temperature: 19
+        rain: false
+        weekday: "Samstag"
+        price: 3.49
+        promotion: false
+      hidden:
+        sports_event: false
+        school_holiday: false
+        local_festival: false
+        local_market: true
+      noise:
+        - "lieferzeit_geaendert"
+
+    narrative: |
+      Sie verwalten die Bäckerei bei Tegut in Würzburg-Sanderau.
+      Morgen ist Samstag, der 13. September.
+
+      Die Wettervorhersage zeigt einen angenehmen Herbsttag bei 19°C,
+      trocken mit teilweise bewölkt. Brot hat den regulären Preis.
+
+      Morgen ist Wochenmarkttag auf dem Marktplatz, nur zwei Straßen
+      von Ihrem Geschäft entfernt. Der Markt hat mehrere handwerkliche
+      Bäcker, die frisches Sauerteigbrot, Brezeln und Gebäck verkaufen.
+      Er läuft von 7 bis 14 Uhr und zieht viele Besucher an.
+
+      Der Bäckerei-Lieferplan hat sich diese Woche geändert - Brot
+      kommt jetzt eine Stunde früher, aber die Produktverfügbarkeit
+      ist nicht betroffen.
+
+    demand_history: [52, 48, 44, 50, 52, 68, 60, 53, 49, 45, 51, 53, 66, 58]
+
+    computed:
+      ai_forecast: 67
+      ai_recommendation: 72
+      true_expected_demand: 55
+      optimal_order: 59
+      actual_demand: 53
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Backwaren: ~50 Einheiten
+        • Temperatur (19°C): Basis
+        • Samstag: +15 Einheiten (Spitzentag für Backwaren)
+        • Kein Regen: +2 Einheiten
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 67 Einheiten
+
+      confidence: |
+        Ich bin zuversichtlich bei dieser Samstagsprognose.
+        Backwarennachfrage am Samstag folgt konsistenten Mustern.
+        Typische Genauigkeit: ±5 Einheiten.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Wochentag (Samstage sind Spitze),
+        Wetter und Aktionen. Wochenend-Vormittagseinkäufe treiben
+        den Backwarenverkauf - Leute kaufen für Wochenend-Frühstück
+        und Brunch.
+
+      why_order_more: |
+        Ich empfehle 72 Einheiten. Frisches Brot hat niedrigen
+        Restwert (€0,35), also kostet unverkauftes Brot €1,40,
+        während verpasste Verkäufe €1,74 Gewinn kosten. Leichtes
+        Überbestellen empfohlen.
+
+      consider_farmers_market: |
+        Ich habe keine Informationen über Wochenmärkte oder andere
+        lokale Lebensmittelverkäufer. Wenn ein Markt in der Nähe
+        mit konkurrierenden Bäckereiständen stattfindet, könnte
+        das Ihre Nachfrage reduzieren, da Kunden ihre Einkäufe
+        zwischen den Standorten aufteilen.
+
+      what_missing: |
+        Ich verfolge keine konkurrierenden Verkäufer wie Wochen-
+        märkte oder Bäckerei-Pop-ups. Lokale Konkurrenz kann die
+        Nachfrage erheblich beeinflussen, besonders für
+        handwerkliches Brot an Wochenenden.
+
+  # ---------------------------------------------------------------------------
+  # S09: Salat - Fußballspiel (Kleiner Effekt) (KI VERTRAUEN - Grenzfall)
+  # ---------------------------------------------------------------------------
+  S09:
+    id: "S09"
+    product: "fresh_salad"
+    date: "Freitag, 18. April"
+    scenario_type: "trust_ai"
+    difficulty: "hard"
+
+    features:
+      visible:
+        temperature: 22
+        rain: false
+        weekday: "Freitag"
+        price: 3.20
+        promotion: false
+      hidden:
+        sports_event: true
+        school_holiday: false
+        local_festival: false
+      noise:
+        - "regionale_werbekampagne"
+
+    narrative: |
+      Sie verwalten die Frischeabteilung bei EDEKA Trabold in
+      Würzburg-Zellerau. Morgen ist Freitag, der 18. April.
+
+      Die Wettervorhersage zeigt angenehme Frühlingstemperaturen
+      bei 22°C mit Sonnenschein. Salate haben den regulären Preis.
+
+      Die Würzburger Kickers haben morgen Abend ein Heimspiel gegen
+      ein Mittelfeld-Team. Es ist ein normales Ligaspiel, kein
+      Großereignis. Das Geschäft ist nicht besonders nah am
+      Stadionbereich.
+
+      Die Supermarktkette führt diesen Monat eine regionale
+      Werbekampagne durch, obwohl diese nicht speziell Salate
+      bewirbt.
+
+    demand_history: [46, 34, 40, 44, 48, 54, 50, 47, 35, 41, 45, 49, 55, 51]
+
+    computed:
+      ai_forecast: 55
+      ai_recommendation: 59
+      true_expected_demand: 58
+      optimal_order: 62
+      actual_demand: 56
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Salate: ~45 Einheiten
+        • Temperatur (22°C): +2 Einheiten
+        • Freitag: +4 Einheiten
+        • Kein Regen: +4 Einheiten
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 55 Einheiten
+
+      confidence: |
+        Ich bin recht zuversichtlich. Frühlingsfreitage zeigen
+        konsistente Muster. Das Wetter sieht günstig für
+        Salatnachfrage aus. Typische Genauigkeit: ±5 Einheiten.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Temperatur, Niederschlag,
+        Wochentag, Preise und Aktionen. Salatnachfrage reagiert
+        gut auf angenehmes Wetter.
+
+      why_order_more: |
+        Ich empfehle 59 Einheiten. Die Kostenstruktur (€1,60
+        Gewinn vs. €1,20 Verlust) favorisiert leichtes
+        Überbestellen.
+
+      consider_football_match: |
+        Ich verfolge keine Sportevents. Wenn ein Spiel stattfindet,
+        ist der Effekt auf die Salatnachfrage typischerweise
+        kleiner als bei anderen Produkten. Leute, die Fußball
+        schauen, bevorzugen Snacks und Fertiggerichte gegenüber
+        frischen Salaten.
+
+      what_missing: |
+        Ich habe keine Sportpläne oder Eventdaten. Speziell für
+        Salate haben Sportevents normalerweise minimalen Einfluss,
+        es sei denn, es sind Großveranstaltungen, die große
+        Menschenmengen in die Gegend ziehen.
+
+  # ---------------------------------------------------------------------------
+  # S10: Eis - Fest + Heißes Wetter (STARK NACH OBEN ANPASSEN)
+  # ---------------------------------------------------------------------------
+  S10:
+    id: "S10"
+    product: "ice_cream"
+    date: "Samstag, 2. August"
+    scenario_type: "override_up"
+    difficulty: "medium"
+
+    features:
+      visible:
+        temperature: 32
+        rain: false
+        weekday: "Samstag"
+        price: 4.99
+        promotion: false
+      hidden:
+        sports_event: false
+        school_holiday: true
+        local_festival: true
+      noise:
+        - "neue_display_kuehltruhe"
+
+    narrative: |
+      Sie verwalten Tiefkühldesserts bei Tegut in Würzburg-Sanderau.
+      Morgen ist Samstag, der 2. August.
+
+      Eine Hitzewelle trifft Würzburg - die Vorhersage zeigt 32°C,
+      der bisher heißeste Tag des Sommers. Sonnig und trocken den
+      ganzen Tag erwartet.
+
+      Es ist mitten in den Sommerferien. Außerdem findet das
+      Kiliani-Volksfest auf der Talavera statt, etwa 15 Gehminuten
+      von Ihrem Geschäft entfernt. Das Fest zieht täglich tausende
+      Besucher für Fahrgeschäfte, Essen und Unterhaltung an.
+
+      Das Geschäft hat kürzlich eine neue Display-Kühltruhe mit
+      besserer Sichtbarkeit am Eingang installiert.
+
+    demand_history: [44, 40, 50, 58, 68, 75, 70, 46, 42, 52, 60, 70, 78, 72]
+
+    computed:
+      ai_forecast: 83
+      ai_recommendation: 91
+      true_expected_demand: 118
+      optimal_order: 128
+      actual_demand: 122
+
+    ai_responses:
+      explain_forecast: |
+        Meine Prognose basiert auf:
+        • Basisnachfrage für Eis: ~35 Einheiten
+        • Temperatur (32°C): +18 Einheiten (Hitzewelle = außergewöhnliche Nachfrage)
+        • Samstag: +10 Einheiten (Wochenend-Spitze)
+        • Kein Regen: +8 Einheiten
+        • Keine Aktion: Basis
+
+        Gesamtprognose: 83 Einheiten
+
+      confidence: |
+        Ich bin sehr zuversichtlich über starke Nachfrage angesichts
+        der Hitzewelle. 32°C treibt außergewöhnliche Eisverkäufe.
+        Dies ist wahrscheinlich das obere Ende meiner typischen
+        Vorhersagen. Genauigkeit kann bei extremer Hitze mehr
+        variieren.
+
+      what_factors: |
+        Mein Modell berücksichtigt: Temperatur (heute extrem
+        wichtig), Sonnenschein, Niederschlag, Wochentag und
+        Aktionen. Bei 32°C ist Temperatur der dominierende Faktor.
+
+      why_order_more: |
+        Ich empfehle 91 Einheiten. Angesichts der Hitzewelle
+        könnte die Nachfrage sogar höher sein als die Prognose.
+        Eis hat keinen Restwert, also bedeuten Fehlmengen
+        verlorene Verkäufe und enttäuschte Kunden an einem
+        Spitzentag.
+
+      consider_school_holiday: |
+        Ich verfolge keine Schulkalender. Sommerferien bedeuten
+        mehr Familien mit Kindern unterwegs, was die Eisnachfrage
+        erheblich steigert.
+
+      consider_festival: |
+        Ich habe keine Informationen über Feste oder Events.
+        Große Outdoor-Veranstaltungen bei heißem Wetter können
+        die Eisnachfrage dramatisch steigern, da Besucher
+        Abkühlung von der Hitze suchen.
+
+      what_missing: |
+        Ich verfolge keine Schulferien, Feste oder besondere
+        Events. Bei extremer Hitze kombiniert mit Sommerferien
+        und Events in der Nähe könnte die tatsächliche Nachfrage
+        meine Prognose deutlich übertreffen. Erwägen Sie,
+        deutlich über meiner Empfehlung zu bestellen, wenn Sie
+        Menschenmengen erwarten.
+
+# =============================================================================
+# ENDE DES SZENARIO-BACKLOGS
+# =============================================================================
