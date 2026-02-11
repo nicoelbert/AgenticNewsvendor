@@ -39,6 +39,10 @@ class Scenario:
     profit_per_unit: float
     loss_per_unit: float
 
+    # Model coefficients (for technical log)
+    base_level: float = 0.0
+    visible_betas: Dict[str, float] = field(default_factory=dict)
+
     # AI responses
     ai_responses: Dict[str, str] = field(default_factory=dict)
 
@@ -116,6 +120,8 @@ class ScenarioLoader:
             salvage=product_config.get("salvage", 0),
             profit_per_unit=product_config.get("profit_per_unit", 0),
             loss_per_unit=product_config.get("loss_per_unit", 0),
+            base_level=product_config.get("base_level", 0),
+            visible_betas=product_config.get("visible_betas", {}),
             ai_responses=scenario_data.get("ai_responses", {}),
             full_config=scenario_data,
         )

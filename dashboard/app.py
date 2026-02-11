@@ -198,6 +198,52 @@ st.markdown(
         padding: 10px !important;
         border-radius: 8px !important;
     }
+
+    /* Technical log styling */
+    .tech-log {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 6px;
+        padding: 12px;
+        font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+        font-size: 12px !important;
+        line-height: 1.5;
+    }
+    .tech-log-header {
+        color: #64748b;
+        font-size: 10px !important;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #e2e8f0;
+    }
+    .tech-log-section {
+        margin-bottom: 10px;
+    }
+    .tech-log-title {
+        color: #475569;
+        font-weight: 600;
+        font-size: 11px !important;
+        margin-bottom: 4px;
+    }
+    .tech-log-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 3px 0;
+        border-bottom: 1px dotted #e2e8f0;
+    }
+    .tech-log-key {
+        color: #64748b;
+    }
+    .tech-log-value {
+        color: #1e293b;
+        font-weight: 500;
+    }
+    .tech-log-coeff {
+        color: #7c3aed;
+        font-weight: 600;
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -702,6 +748,68 @@ def page_main_task():
             scenario.demand_history, ai_forecast=scenario.ai_forecast, target_weekday=weekday_short
         )
         st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+
+        # Technical Log (collapsible) - shows model documentation
+        with st.expander("📋 Modelldokumentation", expanded=False):
+            # Map beta names to German labels
+            beta_labels = {
+                "temperature": ("Temperatur", f"{visible.get('temperature', 20)}°C"),
+                "rain": ("Regen", "Ja" if visible.get("rain") else "Nein"),
+                "weekday_friday": ("Wochentag Fr", "Ja" if visible.get("weekday") in ["Freitag", "Friday"] else "Nein"),
+                "weekday_saturday": ("Wochentag Sa", "Ja" if visible.get("weekday") in ["Samstag", "Saturday"] else "Nein"),
+                "weekday_sunday": ("Wochentag So", "Ja" if visible.get("weekday") in ["Sonntag", "Sunday"] else "Nein"),
+                "promotion": ("Aktion", "Ja" if visible.get("promotion") else "Nein"),
+            }
+
+            # Build coefficient display
+            coeff_rows = ""
+            for beta_name, coeff_value in scenario.visible_betas.items():
+                if beta_name in beta_labels:
+                    label, current_val = beta_labels[beta_name]
+                    sign = "+" if coeff_value >= 0 else ""
+                    coeff_rows += f'''
+                    <div class="tech-log-row">
+                        <span class="tech-log-key">{label}</span>
+                        <span class="tech-log-value">{current_val}</span>
+                        <span class="tech-log-coeff">{sign}{coeff_value:.1f}</span>
+                    </div>'''
+
+            # Calculate confidence interval (±15%)
+            ci_low = int(scenario.ai_forecast * 0.85)
+            ci_high = int(scenario.ai_forecast * 1.15)
+
+            st.markdown(
+                f'''
+                <div class="tech-log">
+                    <div class="tech-log-header">PROGNOSEMODELL v2.3 · Training: POS 2022-2024</div>
+
+                    <div class="tech-log-section">
+                        <div class="tech-log-title">INPUT-FEATURES & KOEFFIZIENTEN</div>
+                        <div class="tech-log-row">
+                            <span class="tech-log-key">Basisnachfrage</span>
+                            <span class="tech-log-value">—</span>
+                            <span class="tech-log-coeff">{scenario.base_level:.0f}</span>
+                        </div>
+                        {coeff_rows}
+                    </div>
+
+                    <div class="tech-log-section">
+                        <div class="tech-log-title">OUTPUT</div>
+                        <div class="tech-log-row">
+                            <span class="tech-log-key">prognose</span>
+                            <span class="tech-log-value">{scenario.ai_forecast} Einheiten</span>
+                            <span class="tech-log-coeff"></span>
+                        </div>
+                        <div class="tech-log-row">
+                            <span class="tech-log-key">konfidenz_70</span>
+                            <span class="tech-log-value">[{ci_low}, {ci_high}]</span>
+                            <span class="tech-log-coeff"></span>
+                        </div>
+                    </div>
+                </div>
+                ''',
+                unsafe_allow_html=True,
+            )
 
     # --- RIGHT COLUMN: Decision+Cost (top) + Chat (bottom) ---
     with col_right:
