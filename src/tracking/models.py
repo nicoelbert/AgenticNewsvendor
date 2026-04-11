@@ -33,6 +33,7 @@ class TrialRecord:
     # Interaction data
     questions_asked: List[str] = field(default_factory=list)
     question_timestamps: List[str] = field(default_factory=list)
+    chat_messages: List[Dict] = field(default_factory=list)  # [{role, content}]
 
     # Computed after submission
     forecast_adjustment: Optional[float] = None  # participant - AI

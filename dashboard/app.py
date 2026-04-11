@@ -11,6 +11,10 @@ from pathlib import Path
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
+from dotenv import load_dotenv
+
+# Load .env from project root
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -263,13 +267,10 @@ def init_session_state():
         st.session_state.chat_history = []
         st.session_state.storage = FileStorage(RESULTS_DIR)
         st.session_state.store_location = STORES[0]
-        st.session_state.llm_responder = None  # LLM responder instance
+        st.session_state.llm_responder = None  # LLM chatbot instance
 
         # Check for query params
         params = st.query_params
-
-        # LLM mode: ?llm=true enables real LLM responses
-        st.session_state.use_llm = params.get("llm") == "true"
 
         # Quick-start mode: ?dashboard=true
         if params.get("dashboard") == "true":
@@ -384,12 +385,28 @@ def create_demand_chart(
     return fig
 
 
+def _md_to_html(text: str) -> str:
+    """Convert basic markdown to HTML for use inside chat bubbles."""
+    import re
+
+    # Escape HTML entities first
+    text = text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+    # Bold **text**
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    # Italic *text*
+    text = re.sub(r"\*(.+?)\*", r"<em>\1</em>", text)
+    # Line breaks
+    text = text.replace("\n", "<br>")
+    return text
+
+
 def render_chat_message(role: str, content: str):
     """Render a chat message bubble."""
+    html_content = _md_to_html(content)
     if role == "user":
-        st.markdown(f'<div class="chat-bubble-user">{content}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="chat-bubble-user">{html_content}</div>', unsafe_allow_html=True)
     else:
-        st.markdown(f'<div class="chat-bubble-ai">{content}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="chat-bubble-ai">{html_content}</div>', unsafe_allow_html=True)
 
 
 def page_welcome():
@@ -435,7 +452,7 @@ def page_welcome():
 
         st.markdown("---")
 
-        if st.button("▶️ Studie starten", use_container_width=True, type="primary"):
+        if st.button("▶️ Studie starten", width="stretch", type="primary"):
             st.session_state.session = ParticipantSession()
             loader = load_scenario_loader()
             st.session_state.session.scenario_order = loader.get_randomized_order()
@@ -525,9 +542,8 @@ def page_instructions():
 
         if st.button(
             "Weiter zu den Szenarien →",
-            use_container_width=True,
+            width="stretch",
             type="primary",
-            disabled=not correct,
         ):
             st.session_state.page = "main_task"
             st.rerun()
@@ -535,7 +551,6 @@ def page_instructions():
 
 def page_main_task():
     """Main task page with chat interface."""
-    from src.agent import AgentResponder
     from src.dgp import DemandModel, ProductConfig
     from src.tracking import TrialRecord
 
@@ -569,15 +584,15 @@ def page_main_task():
         )
         st.session_state.chat_history = []
 
-        # Initialize LLM responder if in LLM mode
-        if st.session_state.use_llm:
-            product_config = loader.products.get(scenario.product, {})
-            st.session_state.llm_responder = LLMResponder(
-                scenario_config=scenario.full_config,
-                product_config=product_config,
-            )
-
-    agent = AgentResponder(scenario.full_config)
+        # Initialize LLM chatbot responder
+        product_config = loader.products.get(scenario.product, {})
+        st.session_state.llm_responder = LLMResponder(
+            scenario_config=scenario.full_config,
+            product_config=product_config,
+            narrative=scenario.narrative,
+            demand_history=scenario.demand_history,
+            ai_recommendation=scenario.ai_recommendation,
+        )
 
     # Progress bar with inline text
     progress = (session.current_trial + 1) / len(session.scenario_order)
@@ -733,7 +748,7 @@ def page_main_task():
         )
         tbl_col, ai_col = st.columns([4, 2], gap="small")
         with tbl_col:
-            st.dataframe(styled_df, use_container_width=True, hide_index=False)
+            st.dataframe(styled_df, width="stretch", hide_index=False)
         with ai_col:
             st.markdown(
                 f"""
@@ -762,7 +777,7 @@ def page_main_task():
         fig = create_demand_chart(
             scenario.demand_history, ai_forecast=scenario.ai_forecast, target_weekday=weekday_short
         )
-        st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+        st.plotly_chart(fig, width="stretch", config={"displayModeBar": False})
 
         # Technical Log - shows model documentation (always visible)
         st.markdown(
@@ -849,7 +864,7 @@ def page_main_task():
             can_submit = forecast is not None and order is not None
             if st.button(
                 "Weiter →",
-                use_container_width=True,
+                width="stretch",
                 type="primary",
                 disabled=not can_submit,
                 key=f"submit_{scenario_id}",
@@ -904,180 +919,49 @@ def page_main_task():
 
         # Chat interface (still inside col_right)
         st.markdown(
-            '<p class="section-label" style="margin-top:12px;">Fragen an die KI</p>',
+            '<p class="section-label" style="margin-top:12px;">Chat mit KI-Assistent</p>',
             unsafe_allow_html=True,
         )
 
-        # Grey chat box using container with border
+        # Chat box with conversation history
         chat_container = st.container(border=True)
         with chat_container:
-            # Chat history display
             if st.session_state.chat_history:
                 for msg in st.session_state.chat_history:
                     render_chat_message(msg["role"], msg["content"])
-
-        # Build feature list from visible_betas for responses
-        def get_feature_list() -> str:
-            beta_labels = {
-                "temperature": "Temperatur",
-                "rain": "Regen",
-                "weekday_friday": "Wochentag (Freitag)",
-                "weekday_saturday": "Wochentag (Samstag)",
-                "weekday_sunday": "Wochentag (Sonntag)",
-                "promotion": "Aktion/Promotion",
-            }
-            features = []
-            for beta_name in scenario.visible_betas.keys():
-                label = beta_labels.get(beta_name, beta_name)
-                features.append(f"• {label}")
-            return "\n".join(features)
-
-        # Generate responses based on question type
-        def get_response(q_type: str, custom_term: str = None) -> str:
-            # Use LLM if available and enabled
-            if st.session_state.use_llm and st.session_state.llm_responder:
-                llm = st.session_state.llm_responder
-                if q_type == "model_features":
-                    return llm.ask("Welche Daten nutzt das Modell?")
-                elif q_type == "calculation":
-                    return llm.ask("Wie berechnet sich die Prognose?")
-                elif q_type == "check_feature" and custom_term:
-                    return llm.ask(f"Berücksichtigt das Modell '{custom_term}'?")
-                else:
-                    return llm.ask(custom_term or "Erkläre das Modell.")
-
-            # Fallback to canned responses
-            ci_low = int(scenario.ai_forecast * 0.85)
-            ci_high = int(scenario.ai_forecast * 1.15)
-
-            if q_type == "model_features":
-                return f"""Das Modell nutzt folgende **Eingabedaten** (siehe Modelldokumentation):
-
-{get_feature_list()}
-
-Basisnachfrage: {scenario.base_level} Einheiten
-
-Die Koeffizienten zeigen, wie stark jeder Faktor die Prognose beeinflusst."""
-
-            elif q_type == "calculation":
-                # Build calculation breakdown
-                calc_parts = [f"Basisnachfrage: {scenario.base_level}"]
-                for beta_name, coeff in scenario.visible_betas.items():
-                    if coeff != 0:
-                        sign = "+" if coeff > 0 else ""
-                        calc_parts.append(f"{beta_name}: {sign}{coeff:.1f}")
-
-                return f"""Die Prognose berechnet sich aus:
-
-**Basisnachfrage** + Summe der Feature-Effekte
-
-Für dieses Szenario:
-• Basisnachfrage: {scenario.base_level} Einheiten
-• Feature-Effekte: siehe Modelldokumentation
-
-**Ergebnis:** {scenario.ai_forecast} Einheiten
-**70%-Konfidenzintervall:** [{ci_low}, {ci_high}]"""
-
-            elif q_type == "check_feature":
-                if not custom_term:
-                    return "Bitte geben Sie einen Begriff ein, den ich prüfen soll."
-
-                # Check if term matches any known feature
-                term_lower = custom_term.lower()
-                known_features = {
-                    "temperatur": "temperature",
-                    "temp": "temperature",
-                    "wetter": "temperature",
-                    "regen": "rain",
-                    "wochentag": "weekday_friday",
-                    "freitag": "weekday_friday",
-                    "samstag": "weekday_saturday",
-                    "sonntag": "weekday_sunday",
-                    "aktion": "promotion",
-                    "promotion": "promotion",
-                    "angebot": "promotion",
-                }
-
-                # Check if it's a known feature
-                matched_feature = None
-                for keyword, feature_key in known_features.items():
-                    if keyword in term_lower:
-                        if feature_key in scenario.visible_betas:
-                            matched_feature = feature_key
-                            break
-
-                if matched_feature:
-                    coeff = scenario.visible_betas[matched_feature]
-                    return f"""✅ **"{custom_term}"** ist in der Modelldokumentation enthalten.
-
-Feature: {matched_feature}
-Koeffizient: {'+' if coeff >= 0 else ''}{coeff:.1f}
-
-Dieser Faktor ist bereits in der Prognose von {scenario.ai_forecast} Einheiten berücksichtigt."""
-                else:
-                    return f"""❌ **"{custom_term}"** ist **nicht** in der Modelldokumentation aufgeführt.
-
-Das Modell verwendet nur:
-{get_feature_list()}
-
-"{custom_term}" ist kein Input-Feature des Prognosemodells."""
-
-            return "Ich kann diese Frage nicht beantworten."
-
-        # 3 standardized question buttons
-        question_buttons = [
-            ("model_features", "Welche Daten nutzt das Modell?"),
-            ("calculation", "Wie berechnet sich die Prognose?"),
-        ]
-
-        with chat_container:
-            # Show suggestion label only if no chat history
-            if not st.session_state.chat_history:
+            else:
                 st.markdown(
-                    '<p style="color:#666; font-size:0.75rem; margin:0.3rem 0;">Fragen:</p>',
+                    '<p style="color:#999; font-size:0.8rem; margin:0.5rem 0;">Stellen Sie dem KI-Assistenten eine Frage zum Prognosemodell, den Daten oder der Bestellentscheidung...</p>',
                     unsafe_allow_html=True,
                 )
+            # Placeholder for new messages during LLM call
+            chat_placeholder = st.empty()
 
-            # Two standard question buttons
-            for q_type, q_text in question_buttons:
-                btn_key = f"q_{q_type}_{scenario_id}"
-                if st.button(
-                    f"💬 {q_text}", key=btn_key, use_container_width=True, type="secondary"
-                ):
-                    st.session_state.chat_history.append({"role": "user", "content": q_text})
-                    response = get_response(q_type)
-                    st.session_state.chat_history.append({"role": "ai", "content": response})
-                    st.session_state.current_trial.questions_asked.append(q_type)
-                    st.session_state.current_trial.question_timestamps.append(
-                        datetime.now().isoformat()
-                    )
-                    st.rerun()
+        # Free-text chat input
+        user_message = st.chat_input(
+            "Ihre Frage an den KI-Assistenten...",
+            key=f"chat_input_{scenario_id}",
+        )
+        if user_message:
+            # Immediately show user message + spinner in the chat area
+            with chat_placeholder.container():
+                render_chat_message("user", user_message)
+                with st.spinner("KI-Assistent antwortet..."):
+                    llm = st.session_state.llm_responder
+                    response = llm.ask(user_message)
 
-            # Third question with free text input: "Berücksichtigt das Modell ___?"
-            st.markdown(
-                '<p style="color:#666; font-size:0.7rem; margin:0.5rem 0 0.2rem 0;">Prüfen Sie einen Begriff:</p>',
-                unsafe_allow_html=True,
-            )
-            check_col1, check_col2 = st.columns([3, 1])
-            with check_col1:
-                check_term = st.text_input(
-                    "Begriff prüfen",
-                    placeholder="z.B. Schulferien, Fußball...",
-                    key=f"check_term_{scenario_id}",
-                    label_visibility="collapsed",
-                )
-            with check_col2:
-                if st.button("Prüfen", key=f"check_btn_{scenario_id}", use_container_width=True):
-                    if check_term:
-                        question_text = f"Berücksichtigt das Modell '{check_term}'?"
-                        st.session_state.chat_history.append({"role": "user", "content": question_text})
-                        response = get_response("check_feature", check_term)
-                        st.session_state.chat_history.append({"role": "ai", "content": response})
-                        st.session_state.current_trial.questions_asked.append(f"check:{check_term}")
-                        st.session_state.current_trial.question_timestamps.append(
-                            datetime.now().isoformat()
-                        )
-                        st.rerun()
+            # Persist to chat history
+            st.session_state.chat_history.append({"role": "user", "content": user_message})
+            st.session_state.chat_history.append({"role": "ai", "content": response})
+
+            # Track in trial record
+            trial = st.session_state.current_trial
+            trial.questions_asked.append(user_message)
+            trial.question_timestamps.append(datetime.now().isoformat())
+            trial.chat_messages.append({"role": "user", "content": user_message})
+            trial.chat_messages.append({"role": "ai", "content": response})
+
+            st.rerun()
 
 
 def page_complete():
