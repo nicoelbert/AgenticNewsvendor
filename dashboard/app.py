@@ -36,7 +36,7 @@ STORES = [
 
 # Page config
 st.set_page_config(
-    page_title="Grocery Ordering Study",
+    page_title="Bestellstudie",
     page_icon="🛒",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -352,11 +352,11 @@ def create_demand_chart(
             y=[forecast_value],
             mode="markers+text",
             marker=dict(size=16, color="#764ba2", symbol="circle-open", line=dict(width=3)),
-            name="KI-Prognose",
-            text=["KI-Prognose"],
+            name="KI-Nachfrageprognose",
+            text=["KI-Nachfrageprognose"],
             textposition="top center",
             textfont=dict(size=10, color="#764ba2", family="Arial"),
-            hovertemplate=f"<b>{target_weekday} (KI-Prognose)</b><br>Vorhersage: {forecast_value} Einheiten<extra></extra>",
+            hovertemplate=f"<b>{target_weekday} (KI-Nachfrageprognose)</b><br>Vorhersage: {forecast_value} Einheiten<extra></extra>",
         )
     )
 
@@ -479,12 +479,12 @@ def page_instructions():
         |---|---|
         | **Einkaufspreis** | Was Sie pro Einheit bezahlen |
         | **Verkaufspreis** | Was Kunden zahlen |
-        | **Restwert** | Was Sie für unverkaufte Ware erhalten |
+        | **Restwert** | Was Sie für nicht verkaufte Ware noch erhalten (z.B. reduzierter Abverkauf oder €0 bei Totalverlust) |
 
         **Ihr Gewinn hängt ab von:**
         - ✅ Verkaufte Einheiten = Verkaufspreis − Einkaufspreis
         - ❌ Unverkaufte Einheiten = Restwert − Einkaufspreis (meist Verlust)
-        - ❌ Fehlmengen = Entgangener Gewinn
+        - ❌ Zu wenig bestellt = Kunden gehen leer aus (entgangener Gewinn)
 
         ### Der KI-Assistent
 
@@ -652,8 +652,8 @@ def page_main_task():
     # Build table
     conditions_df = pd.DataFrame(
         {
-            "": ["Nachfrage", "Temperatur", "Regen", "Wochentag"],
-            "Vorwoche": [f"{last_friday_demand}", f"{temp_last_week}°C", "Nein", weekday_short],
+            "": ["Verkaufte Einheiten", "Temperatur", "Regen", "Wochentag"],
+            "Vor 7 Tagen": [f"{last_friday_demand}", f"{temp_last_week}°C", "Nein", weekday_short],
             "Heute": [f"{today_demand}", f"{temp_today}°C", "Nein", "—"],
             "Morgen": [
                 "?",
@@ -661,7 +661,7 @@ def page_main_task():
                 "Ja" if visible.get("rain") else "Nein",
                 weekday_short,
             ],
-            "Δ": [demand_indicator, temp_indicator, "—", "—"],
+            "Trend": [demand_indicator, temp_indicator, "—", "—"],
         }
     )
 
@@ -674,14 +674,14 @@ def page_main_task():
 
     styled_df = (
         conditions_df.set_index("")
-        .style.map(color_delta, subset=["Δ"])
+        .style.map(color_delta, subset=["Trend"])
         .set_properties(**{"font-size": "14px", "font-weight": "500"})
         .set_properties(
             subset=["Morgen"],
             **{"background-color": "#f3e8ff", "font-weight": "600", "color": "#7c3aed"},
         )
         .set_properties(
-            subset=["Vorwoche", "Heute"], **{"background-color": "#f8fafc", "color": "#475569"}
+            subset=["Vor 7 Tagen", "Heute"], **{"background-color": "#f8fafc", "color": "#475569"}
         )
         .set_table_styles(
             [
@@ -744,7 +744,7 @@ def page_main_task():
     with col_left:
         # Table + AI side by side
         st.markdown(
-            '<p class="section-label">Bedingungen & KI-Assistent</p>', unsafe_allow_html=True
+            '<p class="section-label">Bedingungen für morgen</p>', unsafe_allow_html=True
         )
         tbl_col, ai_col = st.columns([4, 2], gap="small")
         with tbl_col:
@@ -754,16 +754,7 @@ def page_main_task():
                 f"""
             <div class="metric-card">
                 <div class="metric-value">{scenario.ai_forecast}</div>
-                <div class="metric-label">KI-Prognose</div>
-            </div>
-            """,
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                f"""
-            <div class="metric-card">
-                <div class="metric-value">{scenario.ai_recommendation}</div>
-                <div class="metric-label">KI-Empfehlung</div>
+                <div class="metric-label">KI-Nachfrageprognose</div>
             </div>
             """,
                 unsafe_allow_html=True,
@@ -771,7 +762,7 @@ def page_main_task():
 
         # Chart below
         st.markdown(
-            '<p class="section-label" style="margin-top:12px;">Nachfrageverlauf (14 Tage)</p>',
+            '<p class="section-label" style="margin-top:12px;">Verkäufe der letzten 14 Tage</p>',
             unsafe_allow_html=True,
         )
         fig = create_demand_chart(
@@ -781,7 +772,7 @@ def page_main_task():
 
         # Technical Log - shows model documentation (always visible)
         st.markdown(
-            '<p class="section-label" style="margin-top:12px;">📋 Modelldokumentation</p>',
+            '<p class="section-label" style="margin-top:12px;">📋 So rechnet das Prognosemodell</p>',
             unsafe_allow_html=True,
         )
 
@@ -815,20 +806,20 @@ def page_main_task():
         # Build HTML without leading whitespace (markdown interprets 4+ spaces as code)
         tech_log_html = (
             '<div class="tech-log">'
-            '<div class="tech-log-header">PROGNOSEMODELL v2.3 · Training: POS 2022-2024</div>'
+            '<div class="tech-log-header">Prognosemodell · Trainiert mit Verkaufsdaten 2022–2024</div>'
             '<div class="tech-log-section">'
-            '<div class="tech-log-title">INPUT-FEATURES & KOEFFIZIENTEN</div>'
-            f'<div class="tech-log-row"><span class="tech-log-key">Basisnachfrage</span>'
+            '<div class="tech-log-title">EINFLUSSFAKTOREN</div>'
+            f'<div class="tech-log-row"><span class="tech-log-key">Grundnachfrage (ohne Einflüsse)</span>'
             f'<span class="tech-log-value">—</span>'
             f'<span class="tech-log-coeff">{scenario.base_level:.0f}</span></div>'
             f'{coeff_html}'
             '</div>'
             '<div class="tech-log-section">'
             '<div class="tech-log-title">OUTPUT</div>'
-            f'<div class="tech-log-row"><span class="tech-log-key">prognose</span>'
+            f'<div class="tech-log-row"><span class="tech-log-key">Prognose</span>'
             f'<span class="tech-log-value">{scenario.ai_forecast} Einheiten</span>'
             '<span class="tech-log-coeff"></span></div>'
-            f'<div class="tech-log-row"><span class="tech-log-key">konfidenz_70</span>'
+            f'<div class="tech-log-row"><span class="tech-log-key">Unsicherheitsbereich (70%)</span>'
             f'<span class="tech-log-value">[{ci_low}, {ci_high}]</span>'
             '<span class="tech-log-coeff"></span></div>'
             '</div>'
@@ -844,22 +835,20 @@ def page_main_task():
 
         with dec_col:
             forecast = st.number_input(
-                "Prognose",
+                "Ihre Nachfrageschätzung (Einheiten)",
                 min_value=1,
                 max_value=500,
                 value=None,
                 key=f"forecast_{scenario_id}",
-                label_visibility="collapsed",
-                placeholder="Prognose",
+                placeholder="z.B. 50",
             )
             order = st.number_input(
-                "Bestellung",
+                "Ihre Bestellmenge (Einheiten)",
                 min_value=0,
                 max_value=500,
                 value=None,
                 key=f"order_{scenario_id}",
-                label_visibility="collapsed",
-                placeholder="Bestellung",
+                placeholder="z.B. 55",
             )
             can_submit = forecast is not None and order is not None
             if st.button(
@@ -901,16 +890,19 @@ def page_main_task():
                 f"""
             <div class="cost-box">
                 <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                    <span>Einkauf:</span><span style="font-weight:600;">€{scenario.cost:.2f}</span>
+                    <span>Einkaufspreis:</span><span style="font-weight:600;">€{scenario.cost:.2f}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                    <span>Verkaufspreis:</span><span style="font-weight:600;">€{scenario.price:.2f}</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                    <span>Verkauf:</span><span style="font-weight:600;">€{scenario.price:.2f}</span>
+                    <span>Restwert:</span><span style="font-weight:600;">€{scenario.salvage:.2f}</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; border-top:1px solid #ddd; padding-top:6px;">
-                    <span style="color:#2a2;">Gewinn:</span><span style="font-weight:700; color:#2a2;">+€{scenario.profit_per_unit:.2f}</span>
+                    <span style="color:#2a2;">Gewinn/Einheit:</span><span style="font-weight:700; color:#2a2;">+€{scenario.profit_per_unit:.2f}</span>
                 </div>
                 <div style="display:flex; justify-content:space-between;">
-                    <span style="color:#c00;">Verlust:</span><span style="font-weight:700; color:#c00;">−€{scenario.loss_per_unit:.2f}</span>
+                    <span style="color:#c00;">Verlust/Einheit:</span><span style="font-weight:700; color:#c00;">−€{scenario.loss_per_unit:.2f}</span>
                 </div>
             </div>
             """,
@@ -919,7 +911,7 @@ def page_main_task():
 
         # Chat interface (still inside col_right)
         st.markdown(
-            '<p class="section-label" style="margin-top:12px;">Chat mit KI-Assistent</p>',
+            '<p class="section-label" style="margin-top:12px;">Fragen an den KI-Assistenten</p>',
             unsafe_allow_html=True,
         )
 
@@ -931,7 +923,7 @@ def page_main_task():
                     render_chat_message(msg["role"], msg["content"])
             else:
                 st.markdown(
-                    '<p style="color:#999; font-size:0.8rem; margin:0.5rem 0;">Stellen Sie dem KI-Assistenten eine Frage zum Prognosemodell, den Daten oder der Bestellentscheidung...</p>',
+                    '<p style="color:#999; font-size:0.8rem; margin:0.5rem 0;">Fragen Sie die KI z.B. nach der Prognose, den Einflussfaktoren oder der Kostenstruktur...</p>',
                     unsafe_allow_html=True,
                 )
             # Placeholder for new messages during LLM call
@@ -994,9 +986,9 @@ def page_complete():
         if total_optimal > 0:
             efficiency = (total_profit / total_optimal) * 100
             st.metric(
-                "Effizienz",
+                "Ergebnis",
                 f"{efficiency:.1f}%",
-                help="Ihr Gewinn im Vergleich zum optimalen Gewinn",
+                help="Ihr Gewinn im Vergleich zum bestmöglichen Gewinn",
             )
 
         st.markdown(f"""
