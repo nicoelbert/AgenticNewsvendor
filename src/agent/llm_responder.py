@@ -130,7 +130,6 @@ PROGNOSE-OUTPUT:
 KOSTENSTRUKTUR:
   - Einkaufspreis: €{doc.cost:.2f} pro Einheit
   - Verkaufspreis: €{doc.price:.2f} pro Einheit
-  - Restwert (unverkauft): €{doc.salvage:.2f} pro Einheit
   - Gewinn pro verkaufter Einheit: €{doc.profit_per_unit:.2f}
   - Verlust pro unverkaufter Einheit: €{doc.loss_per_unit:.2f}
 ================================================================================
@@ -206,6 +205,26 @@ class LLMResponder:
     def is_available(self) -> bool:
         """Check if LLM is available."""
         return self.client is not None
+
+    def set_api_key(self, api_key: str) -> str:
+        """Set API key and validate it. Returns None on success, error string on failure."""
+        if not ANTHROPIC_AVAILABLE:
+            return "Das Python-Paket `anthropic` ist nicht installiert."
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+            # Validate with a minimal request
+            client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=10,
+                messages=[{"role": "user", "content": "test"}],
+            )
+            self.api_key = api_key
+            self.client = client
+            return None
+        except anthropic.AuthenticationError:
+            return "Ungültiger API-Schlüssel. Bitte überprüfen Sie den Schlüssel und versuchen Sie es erneut."
+        except Exception as e:
+            return f"Verbindungsfehler: {e}"
 
     def ask(self, question: str) -> str:
         """Ask a question to the LLM chatbot."""

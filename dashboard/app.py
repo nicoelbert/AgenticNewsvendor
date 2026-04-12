@@ -486,11 +486,10 @@ def page_instructions():
         |---|---|
         | **Einkaufspreis** | Was Sie pro Einheit bezahlen |
         | **Verkaufspreis** | Was Kunden zahlen |
-        | **Restwert** | Was Sie für nicht verkaufte Ware noch erhalten (z.B. reduzierter Abverkauf oder €0 bei Totalverlust) |
 
         **Ihr Gewinn hängt ab von:**
         - ✅ Verkaufte Einheiten = Verkaufspreis − Einkaufspreis
-        - ❌ Unverkaufte Einheiten = Restwert − Einkaufspreis (meist Verlust)
+        - ❌ Unverkaufte Einheiten = Totalverlust (verderbliche Ware)
         - ❌ Zu wenig bestellt = Kunden gehen leer aus (entgangener Gewinn)
 
         ### Der KI-Assistent
@@ -511,7 +510,7 @@ def page_instructions():
             "Was passiert mit unverkaufter Ware?",
             [
                 "Wird zum vollen Preis am nächsten Tag verkauft",
-                "Wird entsorgt oder zum reduzierten Restwert verkauft",
+                "Wird entsorgt (Totalverlust)",
                 "Wird an den Lieferanten zurückgegeben",
             ],
             index=None,
@@ -537,7 +536,7 @@ def page_instructions():
         )
 
         correct = (
-            q1 == "Wird entsorgt oder zum reduzierten Restwert verkauft"
+            q1 == "Wird entsorgt (Totalverlust)"
             and q2 == "Nein"
             and q3 == "Den Gewinn durch die richtige Bestellmenge maximieren"
         )
@@ -902,10 +901,7 @@ def page_main_task():
                 <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
                     <span>Verkaufspreis:</span><span style="font-weight:600;">€{scenario.price:.2f}</span>
                 </div>
-                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
-                    <span>Restwert:</span><span style="font-weight:600;">€{scenario.salvage:.2f}</span>
-                </div>
-                <div style="display:flex; justify-content:space-between; border-top:1px solid #ddd; padding-top:6px;">
+                <div style="display:flex; justify-content:space-between; border-top:1px solid #ddd; padding-top:6px; margin-top:6px;">
                     <span style="color:#2a2;">Gewinn/Einheit:</span><span style="font-weight:700; color:#2a2;">+€{scenario.profit_per_unit:.2f}</span>
                 </div>
                 <div style="display:flex; justify-content:space-between;">
@@ -936,31 +932,68 @@ def page_main_task():
             # Placeholder for new messages during LLM call
             chat_placeholder = st.empty()
 
+        # API key setup if LLM not available
+        llm = st.session_state.llm_responder
+        if not llm.is_available():
+            with chat_container:
+                st.info("Bitte geben Sie Ihren Anthropic API-Schlüssel ein, um den KI-Assistenten zu nutzen.")
+                api_key_input = st.text_input(
+                    "API-Schlüssel",
+                    type="password",
+                    placeholder="sk-ant-...",
+                    key=f"api_key_{scenario_id}",
+                )
+                if api_key_input:
+                    with st.spinner("Schlüssel wird überprüft..."):
+                        error = llm.set_api_key(api_key_input)
+                    if error:
+                        st.error(error)
+                    else:
+                        st.success("API-Schlüssel erfolgreich gesetzt!")
+                        # If there was a pending question, answer it now
+                        if "pending_question" in st.session_state:
+                            pending = st.session_state.pop("pending_question")
+                            response = llm.ask(pending)
+                            st.session_state.chat_history.append({"role": "user", "content": pending})
+                            st.session_state.chat_history.append({"role": "ai", "content": response})
+                            trial = st.session_state.current_trial
+                            trial.questions_asked.append(pending)
+                            trial.question_timestamps.append(datetime.now().isoformat())
+                            trial.chat_messages.append({"role": "user", "content": pending})
+                            trial.chat_messages.append({"role": "ai", "content": response})
+                        st.rerun()
+
         # Free-text chat input
         user_message = st.chat_input(
             "Ihre Frage an den KI-Assistenten...",
             key=f"chat_input_{scenario_id}",
         )
         if user_message:
-            # Immediately show user message + spinner in the chat area
-            with chat_placeholder.container():
-                render_chat_message("user", user_message)
-                with st.spinner("KI-Assistent antwortet..."):
-                    llm = st.session_state.llm_responder
-                    response = llm.ask(user_message)
+            if not llm.is_available():
+                # Store question and prompt for API key
+                st.session_state.pending_question = user_message
+                st.session_state.chat_history.append({"role": "user", "content": user_message})
+                st.session_state.chat_history.append({"role": "ai", "content": "Bitte geben Sie zuerst einen API-Schlüssel ein (siehe oben), dann beantworte ich Ihre Frage."})
+                st.rerun()
+            else:
+                # Immediately show user message + spinner in the chat area
+                with chat_placeholder.container():
+                    render_chat_message("user", user_message)
+                    with st.spinner("KI-Assistent antwortet..."):
+                        response = llm.ask(user_message)
 
-            # Persist to chat history
-            st.session_state.chat_history.append({"role": "user", "content": user_message})
-            st.session_state.chat_history.append({"role": "ai", "content": response})
+                # Persist to chat history
+                st.session_state.chat_history.append({"role": "user", "content": user_message})
+                st.session_state.chat_history.append({"role": "ai", "content": response})
 
-            # Track in trial record
-            trial = st.session_state.current_trial
-            trial.questions_asked.append(user_message)
-            trial.question_timestamps.append(datetime.now().isoformat())
-            trial.chat_messages.append({"role": "user", "content": user_message})
-            trial.chat_messages.append({"role": "ai", "content": response})
+                # Track in trial record
+                trial = st.session_state.current_trial
+                trial.questions_asked.append(user_message)
+                trial.question_timestamps.append(datetime.now().isoformat())
+                trial.chat_messages.append({"role": "user", "content": user_message})
+                trial.chat_messages.append({"role": "ai", "content": response})
 
-            st.rerun()
+                st.rerun()
 
 
 def page_complete():
