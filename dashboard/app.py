@@ -234,20 +234,27 @@ st.markdown(
     }
     .tech-log-row {
         display: flex;
-        justify-content: space-between;
         padding: 3px 0;
         border-bottom: 1px dotted #e2e8f0;
     }
     .tech-log-key {
         color: #64748b;
+        flex: 1 1 0;
+        min-width: 0;
     }
     .tech-log-value {
         color: #1e293b;
         font-weight: 500;
+        width: 120px;
+        text-align: center;
+        flex-shrink: 0;
     }
     .tech-log-coeff {
         color: #7c3aed;
         font-weight: 600;
+        width: 60px;
+        text-align: right;
+        flex-shrink: 0;
     }
 </style>
 """,
