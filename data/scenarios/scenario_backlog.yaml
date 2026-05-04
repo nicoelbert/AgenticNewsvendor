@@ -155,8 +155,8 @@ scenarios:
         - "neue_regalbeschilderung"
 
     narrative: |
-      Sie sind verantwortlich für die Frischeabteilung bei EDEKA Trabold in
-      Würzburg-Zellerau. Morgen ist Donnerstag, der 12. Juni.
+      Sie sind verantwortlich für die Frischeabteilung bei einem Supermarkt in
+      Ihrer Stadt. Morgen ist Donnerstag, der 12. Juni.
 
       Die Wettervorhersage zeigt 24°C und sonnig. Es ist eine normale
       Arbeitswoche - keine Feiertage, keine Schulferien, keine besonderen
@@ -238,7 +238,7 @@ scenarios:
         - "neue_geschmacksrichtung"
 
     narrative: |
-      Sie verwalten die Tiefkühldesserts bei Tegut in Würzburg-Sanderau.
+      Sie verwalten die Tiefkühldesserts bei einem Supermarkt in Ihrer Stadt.
       Morgen ist Freitag, der 18. Juli.
 
       Die Wettervorhersage zeigt 28°C und sonnig - perfektes Eiswetter.
@@ -323,8 +323,8 @@ scenarios:
         - "mitarbeiterschulung"
 
     narrative: |
-      Sie sind verantwortlich für Fertiggerichte bei EDEKA Trabold in
-      Würzburg-Zellerau. Morgen ist Freitag, der 5. September.
+      Sie sind verantwortlich für Fertiggerichte bei einem Supermarkt in
+      Ihrer Stadt. Morgen ist Freitag, der 5. September.
 
       Das Wetter wird mild bei 18°C, kein Regen. Ein ganz normaler
       Freitag - die Schule hat regulär, keine Feiertage, keine
@@ -405,7 +405,7 @@ scenarios:
         - "ofen_wartung_abgeschlossen"
 
     narrative: |
-      Sie verwalten die Backwarenabteilung bei Tegut in Würzburg-Sanderau.
+      Sie verwalten die Backwarenabteilung bei einem Supermarkt in Ihrer Stadt.
       Morgen ist Samstag, der 9. August.
 
       Das Wetter: 26°C und sonnig - perfekt für draußen.
@@ -491,8 +491,8 @@ scenarios:
         - "neuer_lieferantenvertrag"
 
     narrative: |
-      Sie verwalten die Frischeabteilung bei EDEKA Trabold in
-      Würzburg-Zellerau. Morgen ist Mittwoch, der 25. Juni.
+      Sie verwalten die Frischeabteilung bei einem Supermarkt in
+      Ihrer Stadt. Morgen ist Mittwoch, der 25. Juni.
 
       Achtung beim Wetter: Die offizielle Vorhersage von heute Morgen
       zeigt 27°C und sonnig. ABER: Sie haben gerade das aktuelle
@@ -581,7 +581,7 @@ scenarios:
         - "nachbargeschaeft_renovation"
 
     narrative: |
-      Sie verwalten Tiefkühldesserts bei Tegut in Würzburg-Sanderau.
+      Sie verwalten Tiefkühldesserts bei einem Supermarkt in Ihrer Stadt.
       Morgen ist Sonntag, der 27. Juli.
 
       Das Wetter: 25°C und sonnig - gutes Sommerwetter.
@@ -667,8 +667,8 @@ scenarios:
         - "neue_fertiggericht_marke"
 
     narrative: |
-      Sie sind verantwortlich für Fertiggerichte bei EDEKA Trabold in
-      Würzburg-Zellerau. Morgen ist Samstag, der 31. Mai.
+      Sie sind verantwortlich für Fertiggerichte bei einem Supermarkt in
+      Ihrer Stadt. Morgen ist Samstag, der 31. Mai.
 
       Das Wetter: 20°C, trocken.
 
@@ -757,7 +757,7 @@ scenarios:
         - "lieferzeit_geaendert"
 
     narrative: |
-      Sie verwalten die Bäckerei bei Tegut in Würzburg-Sanderau.
+      Sie verwalten die Bäckerei bei einem Supermarkt in Ihrer Stadt.
       Morgen ist Samstag, der 13. September.
 
       Das Wetter: 19°C, trocken und teilweise bewölkt.
@@ -845,8 +845,8 @@ scenarios:
         - "regionale_werbekampagne"
 
     narrative: |
-      Sie verwalten die Frischeabteilung bei EDEKA Trabold in
-      Würzburg-Zellerau. Morgen ist Freitag, der 18. April.
+      Sie verwalten die Frischeabteilung bei einem Supermarkt in
+      Ihrer Stadt. Morgen ist Freitag, der 18. April.
 
       Das Wetter: 22°C und sonnig - schöner Frühlingstag.
 
@@ -857,7 +857,7 @@ scenarios:
 
       Ihre Erfahrung: Normale Kickers-Spiele haben praktisch keinen
       Einfluss auf Ihren Salatverkauf. Die Fans gehen ins Stadion,
-      aber das betrifft Ihre Kundschaft in Zellerau nicht.
+      aber das betrifft Ihre Kundschaft kaum.
 
       Ansonsten ein normaler Freitag ohne weitere Besonderheiten.
 
@@ -934,7 +934,7 @@ scenarios:
         - "neue_display_kuehltruhe"
 
     narrative: |
-      Sie verwalten Tiefkühldesserts bei Tegut in Würzburg-Sanderau.
+      Sie verwalten Tiefkühldesserts bei einem Supermarkt in Ihrer Stadt.
       Morgen ist Samstag, der 2. August.
 
       Das Wetter: 32°C - Hitzewelle! Der heißeste Tag des Sommers.

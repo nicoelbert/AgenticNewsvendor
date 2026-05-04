@@ -28,12 +28,6 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 SCENARIOS_PATH = DATA_DIR / "scenarios" / "scenario_backlog.yaml"
 RESULTS_DIR = DATA_DIR / "results"
 
-# Store locations
-STORES = [
-    "EDEKA Trabold, Würzburg Zellerau",
-    "Tegut, Würzburg Sanderau",
-]
-
 # Page config
 st.set_page_config(
     page_title="Bestellstudie",
@@ -273,7 +267,6 @@ def init_session_state():
         st.session_state.current_trial = None
         st.session_state.chat_history = []
         st.session_state.storage = FileStorage(RESULTS_DIR)
-        st.session_state.store_location = STORES[0]
         st.session_state.llm_responder = None  # LLM chatbot instance
 
         # Check for query params
@@ -281,8 +274,7 @@ def init_session_state():
 
         # Quick-start mode: ?dashboard=true
         if params.get("dashboard") == "true":
-            # Auto-setup: random store, create session, skip to main task
-            st.session_state.store_location = random.choice(STORES)
+            # Auto-setup: create session, skip to main task
             st.session_state.session = ParticipantSession()
             loader = ScenarioLoader(SCENARIOS_PATH)
             st.session_state.scenario_loader = loader
@@ -450,15 +442,6 @@ def page_welcome():
         ---
         """)
 
-        # Store selection
-        st.session_state.store_location = st.selectbox(
-            "Wählen Sie Ihren Standort:",
-            STORES,
-            index=0,
-        )
-
-        st.markdown("---")
-
         if st.button("▶️ Studie starten", width="stretch", type="primary"):
             st.session_state.session = ParticipantSession()
             loader = load_scenario_loader()
@@ -477,29 +460,55 @@ def page_instructions():
         st.markdown("""
         ### Ihre Aufgabe
 
-        Sie bestellen **frische Lebensmittel** (Salat, Eis, Fertiggerichte, Backwaren).
-        Diese Produkte sind verderblich – nicht verkaufte Ware verliert an Wert.
+        Sie bestellen **frische Lebensmittel** (Salat, Eis, Fertiggerichte, Backwaren)
+        für einen Supermarkt. Diese Produkte sind verderblich – nicht verkaufte Ware
+        verliert an Wert.
 
-        ### Kostenstruktur
+        **In jedem Szenario sehen Sie:**
+        - Eine Situationsbeschreibung (Wetter, besondere Ereignisse etc.)
+        - Historische Verkaufsdaten der letzten 14 Tage
+        - Eine Tabelle mit den Bedingungen für morgen
+        - Eine KI-Nachfrageprognose und eine KI-Bestellempfehlung
 
-        | | Bedeutung |
+        Sie entscheiden dann: **Wie viele Einheiten bestellen Sie?**
+
+        ### Einflussfaktoren auf die Nachfrage
+
+        Die Nachfrage nach frischen Lebensmitteln wird von verschiedenen Faktoren beeinflusst.
+        Hier ist Ihre Intuition gefragt:
+
+        | Faktor | Typischer Einfluss |
         |---|---|
-        | **Einkaufspreis** | Was Sie pro Einheit bezahlen |
-        | **Verkaufspreis** | Was Kunden zahlen |
+        | **Temperatur** | Bei warmem Wetter kaufen Kunden mehr Salat und Eis, bei kühlem Wetter eher Fertiggerichte |
+        | **Regen** | Regen senkt die Nachfrage nach den meisten Frischeprodukten – weniger Laufkundschaft |
+        | **Wochentag** | Freitag und Samstag sind Spitzentage (Wochenend-Einkauf), Sonntag variiert je nach Produkt |
+        | **Aktionen** | Sonderangebote erhöhen die Nachfrage deutlich |
+        | **Besondere Ereignisse** | Feste, Schulferien, Sportevents können die Nachfrage stark verändern |
 
-        **Ihr Gewinn hängt ab von:**
-        - ✅ Verkaufte Einheiten = Verkaufspreis − Einkaufspreis
-        - ❌ Unverkaufte Einheiten = Totalverlust (verderbliche Ware)
-        - ❌ Zu wenig bestellt = Kunden gehen leer aus (entgangener Gewinn)
+        ### Kostenstruktur & Ihr Ziel
+
+        Ihr Ziel ist es, den **Gewinn zu maximieren**. Die Herausforderung: Sie bestellen
+        **bevor** Sie die tatsächliche Nachfrage kennen.
+
+        - **Zu viel bestellt:** Unverkaufte Ware wird entsorgt → **Verlust** (Einkaufspreis verloren)
+        - **Zu wenig bestellt:** Kunden gehen leer aus → **Entgangener Gewinn**
+
+        Die genauen Kosten pro Einheit sehen Sie in jedem Szenario. Überlegen Sie:
+        *Was ist schlimmer – eine Einheit zu viel oder eine zu wenig bestellt?*
+        Wenn entgangener Gewinn teurer ist als Überbestand, lohnt es sich eher etwas
+        **mehr** zu bestellen (und umgekehrt).
 
         ### Der KI-Assistent
 
-        Die KI liefert:
-        - Eine **Nachfrageprognose** (erwartete Verkaufsmenge)
-        - Eine **Bestellempfehlung**
+        In jedem Szenario steht Ihnen ein **KI-Prognosemodell** zur Verfügung:
+        - Es liefert eine **Nachfrageprognose** basierend auf Temperatur, Regen, Wochentag und Aktionen
+        - Es berechnet eine **Bestellempfehlung** auf Basis der Prognose und der Kostenstruktur
 
-        Sie können der KI **Fragen stellen**, um ihre Logik zu verstehen.
-        Die KI ist hilfreich, aber sie kennt nicht alle Faktoren!
+        **Wichtig:** Die KI kennt **nicht alle Faktoren**! Besondere Ereignisse wie
+        Feste, Schulferien oder Sportevents kann die KI nicht berücksichtigen.
+        Nutzen Sie Ihr eigenes Urteilsvermögen, um die KI-Empfehlung ggf. anzupassen.
+
+        Sie können der KI jederzeit **Fragen stellen**, um ihre Logik besser zu verstehen.
 
         ---
         """)
@@ -655,19 +664,33 @@ def page_main_task():
         weekday_raw, weekday_raw[:2] if len(weekday_raw) > 2 else weekday_raw
     )
 
-    # Build table
+    # Build table rows
+    row_labels = ["Verkaufte Einheiten", "Temperatur", "Regen", "Wochentag"]
+    col_prev = [f"{last_friday_demand}", f"{temp_last_week}°C", "Nein", weekday_short]
+    col_today = [f"{today_demand}", f"{temp_today}°C", "Nein", "—"]
+    col_tomorrow = [
+        "?",
+        f"{temp_tomorrow}°C",
+        "Ja" if visible.get("rain") else "Nein",
+        weekday_short,
+    ]
+    col_trend = [demand_indicator, temp_indicator, "—", "—"]
+
+    # Add promotion row if it's a model factor
+    if "promotion" in scenario.visible_betas:
+        row_labels.append("Aktion")
+        col_prev.append("—")
+        col_today.append("—")
+        col_tomorrow.append("Ja" if visible.get("promotion") else "Nein")
+        col_trend.append("—")
+
     conditions_df = pd.DataFrame(
         {
-            "": ["Verkaufte Einheiten", "Temperatur", "Regen", "Wochentag"],
-            "Vor 7 Tagen": [f"{last_friday_demand}", f"{temp_last_week}°C", "Nein", weekday_short],
-            "Heute": [f"{today_demand}", f"{temp_today}°C", "Nein", "—"],
-            "Morgen": [
-                "?",
-                f"{temp_tomorrow}°C",
-                "Ja" if visible.get("rain") else "Nein",
-                weekday_short,
-            ],
-            "Trend": [demand_indicator, temp_indicator, "—", "—"],
+            "": row_labels,
+            "Vor 7 Tagen": col_prev,
+            "Heute": col_today,
+            "Morgen": col_tomorrow,
+            "Trend": col_trend,
         }
     )
 
@@ -729,7 +752,7 @@ def page_main_task():
         f"""
     <div class="scenario-card">
         <h3>🛒 {scenario.product_display_name}</h3>
-        <p>{scenario.date} · {st.session_state.store_location}</p>
+        <p>{scenario.date} · Ein Supermarkt in Ihrer Stadt</p>
     </div>
     """,
         unsafe_allow_html=True,
@@ -737,10 +760,7 @@ def page_main_task():
 
     # === SITUATION (full width) ===
     st.markdown('<p class="section-label">Situation</p>', unsafe_allow_html=True)
-    narrative = scenario.narrative.replace("Munich", "Würzburg").replace("München", "Würzburg")
-    narrative = narrative.replace(
-        "suburban supermarket", st.session_state.store_location.split(",")[0]
-    )
+    narrative = scenario.narrative
     st.markdown(f'<div class="narrative-box">{narrative}</div>', unsafe_allow_html=True)
 
     # === MAIN 2-COLUMN LAYOUT ===
@@ -761,6 +781,13 @@ def page_main_task():
             <div class="metric-card">
                 <div class="metric-value">{scenario.ai_forecast}</div>
                 <div class="metric-label">KI-Nachfrageprognose</div>
+            </div>
+            <div class="metric-card" style="margin-top:8px;">
+                <div class="metric-value" style="color:#16a34a;">{scenario.ai_recommendation}</div>
+                <div class="metric-label">KI-Bestellempfehlung</div>
+            </div>
+            <div style="font-size:11px; color:#b45309; background:#fef3c7; padding:6px 10px; border-radius:6px; margin-top:6px; line-height:1.4;">
+                ⚠ Die KI nutzt nur Temperatur, Regen, Wochentag und Aktionen. Besondere Ereignisse kennt sie nicht.
             </div>
             """,
                 unsafe_allow_html=True,
@@ -792,10 +819,23 @@ def page_main_task():
             "promotion": ("Aktion", "Ja" if visible.get("promotion") else "Nein"),
         }
 
-        # Build coefficient rows (no leading whitespace!)
+        # Determine which weekday beta is active (if any)
+        active_weekday_beta = None
+        weekday_val = visible.get("weekday", "")
+        weekday_beta_map = {
+            "Freitag": "weekday_friday", "Friday": "weekday_friday",
+            "Samstag": "weekday_saturday", "Saturday": "weekday_saturday",
+            "Sonntag": "weekday_sunday", "Sunday": "weekday_sunday",
+        }
+        active_weekday_beta = weekday_beta_map.get(weekday_val)
+
+        # Build coefficient rows — only show active weekday, skip inactive ones
         coeff_rows = []
         for beta_name, coeff_value in scenario.visible_betas.items():
             if beta_name in beta_labels:
+                # Skip inactive weekday betas to avoid confusion
+                if beta_name.startswith("weekday_") and beta_name != active_weekday_beta:
+                    continue
                 label, current_val = beta_labels[beta_name]
                 sign = "+" if coeff_value >= 0 else ""
                 coeff_rows.append(
@@ -844,17 +884,19 @@ def page_main_task():
                 "Ihre Nachfrageschätzung (Einheiten)",
                 min_value=1,
                 max_value=500,
+                step=1,
                 value=None,
                 key=f"forecast_{scenario_id}",
-                placeholder="z.B. 50",
+                placeholder="Eingabe...",
             )
             order = st.number_input(
                 "Ihre Bestellmenge (Einheiten)",
                 min_value=0,
                 max_value=500,
+                step=1,
                 value=None,
                 key=f"order_{scenario_id}",
-                placeholder="z.B. 55",
+                placeholder="Eingabe...",
             )
             can_submit = forecast is not None and order is not None
             if st.button(
@@ -936,7 +978,7 @@ def page_main_task():
         llm = st.session_state.llm_responder
         if not llm.is_available():
             with chat_container:
-                st.info("Bitte geben Sie Ihren Anthropic API-Schlüssel ein, um den KI-Assistenten zu nutzen.")
+                st.warning("Der KI-Assistent ist nicht verfügbar. Bitte geben Sie einen Anthropic API-Schlüssel ein.")
                 api_key_input = st.text_input(
                     "API-Schlüssel",
                     type="password",
@@ -947,7 +989,7 @@ def page_main_task():
                     with st.spinner("Schlüssel wird überprüft..."):
                         error = llm.set_api_key(api_key_input)
                     if error:
-                        st.error(error)
+                        st.error(f"API-Schlüssel ungültig: {error}")
                     else:
                         st.success("API-Schlüssel erfolgreich gesetzt!")
                         # If there was a pending question, answer it now
@@ -973,7 +1015,7 @@ def page_main_task():
                 # Store question and prompt for API key
                 st.session_state.pending_question = user_message
                 st.session_state.chat_history.append({"role": "user", "content": user_message})
-                st.session_state.chat_history.append({"role": "ai", "content": "Bitte geben Sie zuerst einen API-Schlüssel ein (siehe oben), dann beantworte ich Ihre Frage."})
+                st.session_state.chat_history.append({"role": "ai", "content": "⚠️ Der KI-Assistent ist nicht verfügbar. Bitte geben Sie zuerst einen API-Schlüssel ein (siehe oben), dann beantworte ich Ihre Frage."})
                 st.rerun()
             else:
                 # Immediately show user message + spinner in the chat area
@@ -1026,10 +1068,34 @@ def page_complete():
         if total_optimal > 0:
             efficiency = (total_profit / total_optimal) * 100
             st.metric(
-                "Ergebnis",
+                "Gesamtergebnis",
                 f"{efficiency:.1f}%",
                 help="Ihr Gewinn im Vergleich zum bestmöglichen Gewinn",
             )
+
+        # Per-round breakdown table
+        st.markdown("### Ergebnisse pro Runde")
+
+        round_data = []
+        for t in session.trials:
+            t_profit = t.profit or 0
+            t_optimal = t.optimal_profit or 0
+            t_efficiency = (t_profit / t_optimal * 100) if t_optimal > 0 else 0
+            round_data.append({
+                "Runde": t.trial_number,
+                "Produkt": t.product,
+                "KI-Prognose": int(t.ai_forecast),
+                "Ihre Schätzung": int(t.participant_forecast) if t.participant_forecast else "—",
+                "Ihre Bestellung": int(t.participant_order) if t.participant_order else "—",
+                "Tatsächl. Nachfrage": int(t.actual_demand),
+                "Ihr Gewinn": f"€{t_profit:.2f}",
+                "Optimaler Gewinn": f"€{t_optimal:.2f}",
+                "Effizienz": f"{t_efficiency:.0f}%",
+            })
+
+        if round_data:
+            round_df = pd.DataFrame(round_data)
+            st.dataframe(round_df.set_index("Runde"), use_container_width=True)
 
         st.markdown(f"""
         ---
